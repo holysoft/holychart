@@ -81,6 +81,9 @@
   --scrollbar: rgba(216,222,233,0.15);
   --scrollbar-hover: rgba(216,222,233,0.25);
 
+  /* Color picker */
+  --color-picker-arrow: rgba(216,222,233,0.65);
+
   /* Danger — Nord aurora red */
   --danger: #bf616a;
   --danger-bg: rgba(191,97,106,0.12);

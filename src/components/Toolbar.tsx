@@ -35,7 +35,7 @@ export function Toolbar() {
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
     a.href = url
-    a.download = `${diagram.name.replace(/[^a-z0-9]/gi, '_')}.json`
+    a.download = `${diagram.name.replace(/[^a-z0-9]/gi, '_')}.holychart.json`
     a.click()
     URL.revokeObjectURL(url)
   }
@@ -49,7 +49,7 @@ export function Toolbar() {
         const data = JSON.parse(evt.target?.result as string) as Partial<Diagram>
         importDiagram({
           id: '',
-          name: data.name ?? file.name.replace(/\.json$/i, ''),
+          name: data.name ?? file.name.replace(/\.holychart\.json$/i, '').replace(/\.json$/i, ''),
           elements: data.elements ?? [],
           connections: data.connections ?? [],
           viewport: data.viewport ?? { panX: 0, panY: 0, zoom: 1, rotation: 0 },
@@ -225,7 +225,7 @@ export function Toolbar() {
           <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/>
         </svg>
       </ToolBtn>
-      <input ref={fileInputRef} type="file" accept=".json" onChange={handleImport} style={{ display: 'none' }} />
+      <input ref={fileInputRef} type="file" accept=".holychart.json,.json" onChange={handleImport} style={{ display: 'none' }} />
 
       {/* Shortcut hints */}
       <Divider />

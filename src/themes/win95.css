@@ -87,6 +87,9 @@
   --scrollbar-width: 16px;
   --scrollbar-radius: 0px;
 
+  /* Color picker */
+  --color-picker-arrow: rgba(0,0,0,0.55);
+
   /* Danger */
   --danger: #ff0000;
   --danger-bg: #c0c0c0;

@@ -83,6 +83,9 @@
   --scrollbar: linear-gradient(90deg, #7ec0f8 0%, #3d8ee0 50%, #7ec0f8 100%);
   --scrollbar-hover: linear-gradient(90deg, #5eaaef 0%, #2070c8 50%, #5eaaef 100%);
 
+  /* Color picker */
+  --color-picker-arrow: rgba(0,0,0,0.45);
+
   /* Danger — Aqua red gel */
   --danger: #e03030;
   --danger-bg: rgba(224,48,48,0.12);

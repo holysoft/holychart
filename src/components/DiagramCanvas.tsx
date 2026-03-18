@@ -323,7 +323,7 @@ export function DiagramCanvas() {
         if (s.isColorPickerOpen) {
           // Picker already open — cycle to next preset
           e.preventDefault()
-          const cycle = ['', '#6366f1', '#06b6d4', '#10b981', '#f43f5e', '#f59e0b', '#8b5cf6', '#ec4899', '#38bdf8']
+          const cycle = ['', '#6366f1', '#06b6d4', '#10b981', '#f43f5e', '#f59e0b', '#8b5cf6', '#ec4899', '#38bdf8'] // must match PRESETS order in ColorPicker.tsx
           const primaryId = s.selectedIds[0] ?? null
           const current = primaryId
             ? (s.elements.find((el) => el.id === primaryId)?.color ?? '')

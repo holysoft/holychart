@@ -8,9 +8,10 @@ interface PreviewIconProps {
   iconName: string
   label: string
   onSelect: () => void
+  isRandom?: boolean
 }
 
-function PreviewIcon({ iconName, label, onSelect }: PreviewIconProps) {
+function PreviewIcon({ iconName, label, onSelect, isRandom }: PreviewIconProps) {
   const theme = useAppStore(selectResolvedTheme)
   const [loaded, setLoaded] = useState(() => !!getIconImage(iconName, theme))
 
@@ -27,6 +28,7 @@ function PreviewIcon({ iconName, label, onSelect }: PreviewIconProps) {
     <button
       onClick={onSelect}
       style={{
+        position: 'relative',
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',
@@ -38,7 +40,7 @@ function PreviewIcon({ iconName, label, onSelect }: PreviewIconProps) {
         cursor: 'pointer',
         color: 'var(--text)',
         transition: 'all 0.15s',
-        minWidth: 72,
+        width: '100%',
       }}
       onMouseEnter={(e) => {
         ;(e.currentTarget as HTMLButtonElement).style.background = 'var(--accent-bg-subtle)'
@@ -49,6 +51,29 @@ function PreviewIcon({ iconName, label, onSelect }: PreviewIconProps) {
         ;(e.currentTarget as HTMLButtonElement).style.borderColor = 'var(--border-subtle)'
       }}
     >
+      {isRandom && (
+        <div
+          title="Random suggestion"
+          style={{
+            position: 'absolute',
+            top: 4,
+            right: 4,
+            width: 14,
+            height: 14,
+            borderRadius: '50%',
+            background: 'var(--surface-overlay)',
+            border: '1px solid var(--border-muted)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            pointerEvents: 'none',
+          }}
+        >
+          <svg width="8" height="8" viewBox="0 0 24 24" fill="var(--text-muted)">
+            <path d="M17.65 6.35A7.958 7.958 0 0 0 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08A5.99 5.99 0 0 1 12 18c-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/>
+          </svg>
+        </div>
+      )}
       {loaded ? (
         <img
           src={`https://api.iconify.design/${iconName.replace(':', '/')}.svg?height=40&color=${encodeURIComponent(getComputedStyle(document.documentElement).getPropertyValue('--text').trim())}`}
@@ -89,23 +114,19 @@ export function IconSearch() {
   const { isIconSearchOpen, iconSearchQuery, closeIconSearch, setIconSearchQuery, swappingIconId } = useAppStore()
   const theme = useAppStore(selectResolvedTheme)
   const inputRef = useRef<HTMLInputElement>(null)
-  const [results, setResults] = useState<Array<{ iconName: string; label: string }>>([])
+  const [results, setResults] = useState<Array<{ iconName: string; label: string; isRandom?: boolean }>>([])
 
   useEffect(() => {
     if (isIconSearchOpen) {
       setTimeout(() => inputRef.current?.focus(), 50)
-      setResults([])
+      runSearch(iconSearchQuery)
     }
   }, [isIconSearchOpen])
 
   const runSearch = useCallback(
     (q: string) => {
-      if (!q.trim()) {
-        setResults([])
-        return
-      }
-      const fuzzy = fuzzyMatchIcons(q, 12)
-      setResults(fuzzy.map((r) => ({ iconName: r.iconName, label: r.keyword })))
+      const fuzzy = fuzzyMatchIcons(q, 15)
+      setResults(fuzzy.map((r) => ({ iconName: r.iconName, label: r.keyword, isRandom: r.isRandom })))
     },
     []
   )
@@ -193,20 +214,18 @@ export function IconSearch() {
 
         {/* Results */}
         <div style={{ padding: 12, minHeight: 80, maxHeight: 320, overflowY: 'auto' }}>
-          {results.length === 0 && iconSearchQuery.trim() && (
-            <p style={{ color: 'var(--text-muted)', fontSize: 13, textAlign: 'center', padding: '24px 0' }}>
-              No icons found. Try a different word.
-            </p>
-          )}
-          {results.length === 0 && !iconSearchQuery.trim() && (
-            <p style={{ color: 'var(--text-muted)', fontSize: 13, textAlign: 'center', padding: '24px 0' }}>
-              Type to search icons from the Material Design Icons library
-            </p>
+          {results.some((r) => r.isRandom) && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8, color: 'var(--text-muted)', fontSize: 12 }}>
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" style={{ opacity: 0.6, flexShrink: 0 }}>
+                <path d="M17.65 6.35A7.958 7.958 0 0 0 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08A5.99 5.99 0 0 1 12 18c-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/>
+              </svg>
+              {!iconSearchQuery.trim() ? 'Random suggestions — type to search' : results.filter((r) => !r.isRandom).length > 0 ? 'Showing best matches + random suggestions' : 'No matches — showing random suggestions'}
+            </div>
           )}
           <div
             style={{
-              display: 'flex',
-              flexWrap: 'wrap',
+              display: 'grid',
+              gridTemplateColumns: 'repeat(5, 1fr)',
               gap: 8,
             }}
           >
@@ -216,6 +235,7 @@ export function IconSearch() {
                 iconName={r.iconName}
                 label={r.label}
                 onSelect={() => placeIcon(r.iconName, r.label)}
+                isRandom={r.isRandom}
               />
             ))}
           </div>

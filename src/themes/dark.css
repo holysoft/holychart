@@ -81,6 +81,9 @@
   --scrollbar: rgba(255,255,255,0.15);
   --scrollbar-hover: rgba(255,255,255,0.25);
 
+  /* Color picker */
+  --color-picker-arrow: rgba(255,255,255,0.65);
+
   /* Danger */
   --danger: #f87171;
   --danger-bg: rgba(248,113,113,0.1);
