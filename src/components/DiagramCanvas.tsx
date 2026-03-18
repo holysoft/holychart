@@ -7,6 +7,7 @@ import { render } from '../canvas/CanvasRenderer'
 import { loadIcon } from '../icons/iconifyClient'
 import type { IconElement, TextElement, BoxElement } from '../store/types'
 import { measureTextElement } from '../canvas/textMetrics'
+import { FormatBar } from './FormatBar'
 
 function genId() {
   return Math.random().toString(36).slice(2, 10)
@@ -80,6 +81,7 @@ function TextInputOverlay() {
 
   return (
     <div style={{ position: 'fixed', left: textInputPos.screenX, top: textInputPos.screenY, zIndex: 200, transform: 'translate(-8px, -8px)' }}>
+      <FormatBar value={value} setValue={setValue} taRef={textareaRef} hint="⌘↵ confirm" />
       <textarea
         ref={textareaRef}
         value={value}
@@ -90,20 +92,20 @@ function TextInputOverlay() {
           if ((e.metaKey || e.ctrlKey) && e.key === 'b') {
             e.preventDefault()
             const ta = e.currentTarget; const s = ta.selectionStart ?? 0; const en = ta.selectionEnd ?? 0
-            const nv = value.slice(0, s) + '**' + value.slice(s, en) + '**' + value.slice(en)
-            setValue(nv); requestAnimationFrame(() => { ta.selectionStart = s + 2; ta.selectionEnd = en + 2 })
+            setValue(value.slice(0, s) + '**' + value.slice(s, en) + '**' + value.slice(en))
+            requestAnimationFrame(() => { ta.selectionStart = s + 2; ta.selectionEnd = en + 2 })
             return
           }
           if ((e.metaKey || e.ctrlKey) && e.key === 'i') {
             e.preventDefault()
             const ta = e.currentTarget; const s = ta.selectionStart ?? 0; const en = ta.selectionEnd ?? 0
-            const nv = value.slice(0, s) + '*' + value.slice(s, en) + '*' + value.slice(en)
-            setValue(nv); requestAnimationFrame(() => { ta.selectionStart = s + 1; ta.selectionEnd = en + 1 })
+            setValue(value.slice(0, s) + '*' + value.slice(s, en) + '*' + value.slice(en))
+            requestAnimationFrame(() => { ta.selectionStart = s + 1; ta.selectionEnd = en + 1 })
             return
           }
         }}
         onBlur={confirm}
-        placeholder={'Type text…\n(⌘↵ to confirm)'}
+        placeholder={'Type text…'}
         style={{
           background: 'var(--surface-overlay)',
           border: '1px solid var(--accent-border-strong)',
@@ -114,8 +116,8 @@ function TextInputOverlay() {
           lineHeight: 1.5,
           padding: '8px 12px',
           outline: 'none',
-          width: 280,
-          minHeight: 100,
+          width: 360,
+          minHeight: 160,
           resize: 'both',
           boxShadow: 'var(--shadow-input)',
           display: 'block',

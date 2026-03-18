@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { useAppStore } from '../store/useAppStore'
 import { worldToScreen } from '../canvas/ViewportMatrix'
 import { measureTextElement } from '../canvas/textMetrics'
+import { FormatBar } from './FormatBar'
 
 function wrapSelection(ta: HTMLTextAreaElement, marker: string, value: string, setValue: (v: string) => void) {
   const start = ta.selectionStart ?? 0
@@ -65,10 +66,12 @@ export function RenameInput() {
   if (el.type === 'text') {
     // Anchor to element's top-left so resize grows downward naturally
     const screenPos = worldToScreen(el.x, el.y, viewport)
+    const taRef = inputRef as React.RefObject<HTMLTextAreaElement>
     return (
       <div style={{ position: 'fixed', left: screenPos.x, top: screenPos.y, zIndex: 200 }}>
+        <FormatBar value={value} setValue={setValue} taRef={taRef} hint="⌘↵ confirm" />
         <textarea
-          ref={inputRef as React.RefObject<HTMLTextAreaElement>}
+          ref={taRef}
           value={value}
           onChange={(e) => setValue(e.target.value)}
           onKeyDown={(e) => {
@@ -79,14 +82,14 @@ export function RenameInput() {
             if ((e.metaKey || e.ctrlKey) && e.key === 'i') { e.preventDefault(); wrapSelection(e.currentTarget, '*', value, setValue); return }
           }}
           onBlur={confirm}
-          placeholder={'Edit text…\n(⌘↵ to confirm, ⌘B bold, ⌘I italic)'}
+          placeholder={'Edit text…'}
           style={{
             ...sharedInputStyle,
             fontSize: el.fontSize,
             lineHeight: 1.5,
             padding: '8px 12px',
-            width: 280,
-            minHeight: 80,
+            width: 360,
+            minHeight: 160,
             resize: 'both',
             display: 'block',
           }}
