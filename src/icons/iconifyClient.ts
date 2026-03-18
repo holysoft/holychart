@@ -4,6 +4,9 @@ import { BAKED_ICONS } from './bakedIcons'
 const imageCache = new Map<string, HTMLImageElement | Promise<HTMLImageElement>>()
 
 export function themeToHex(theme: string): string {
+  // If it's already a hex color, use it directly
+  if (theme.startsWith('#')) return theme
+  // Otherwise it's a theme name — read the current --text CSS variable
   return getComputedStyle(document.documentElement).getPropertyValue('--text').trim() || '#e2e8f0'
 }
 

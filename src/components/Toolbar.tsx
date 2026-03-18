@@ -154,7 +154,7 @@ export function Toolbar() {
 
       {/* Hierarchy move toggle */}
       <ToolBtn
-        title={hierarchyMove ? 'Hierarchy move on — box moves carry contents (click to disable)' : 'Hierarchy move off — click to enable'}
+        title={hierarchyMove ? 'Hierarchy move on — box moves carry contents (H to disable)' : 'Hierarchy move off — box moves only move self (H to enable)'}
         onClick={toggleHierarchyMove}
         active={hierarchyMove}
       >
@@ -227,27 +227,12 @@ export function Toolbar() {
       </ToolBtn>
       <input ref={fileInputRef} type="file" accept=".holychart.json,.json" onChange={handleImport} style={{ display: 'none' }} />
 
-      {/* Shortcut hints */}
-      <Divider />
-      <div style={{ fontSize: 10, color: 'var(--text-faint)', display: 'flex', gap: 8, alignItems: 'center' }}>
-        <Kbd>I</Kbd>
-        <Kbd>T</Kbd>
-        <span title="Hold ⌥ Option + scroll to rotate">⌥+scroll rotate</span>
-      </div>
     </div>
   )
 }
 
 function Divider() {
   return <div style={{ width: 1, height: 18, background: 'var(--border-subtle)', margin: '0 3px' }} />
-}
-
-function Kbd({ children }: { children: React.ReactNode }) {
-  return (
-    <kbd style={{ background: 'var(--kbd-bg)', padding: '1px 5px', borderRadius: 'var(--radius-sm)', fontSize: 10, fontFamily: 'inherit' }}>
-      {children}
-    </kbd>
-  )
 }
 
 function IconSvg({ d }: { d: string }) {

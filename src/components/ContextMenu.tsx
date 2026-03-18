@@ -15,7 +15,7 @@ interface MenuItem {
 }
 
 function buildItems(store: ReturnType<typeof useAppStore.getState>, pos: { x: number; y: number }): { modeLabel: string; items: MenuItem[] } {
-  const { selectedIds, selectedConnectionId, connectingFromId, toolMode, elements, connections, viewport, defaultFontSize } = store
+  const { selectedIds, selectedConnectionId, connectingFromId, toolMode, elements, connections, viewport, defaultFontSize, hierarchyMove, toggleHierarchyMove } = store
 
   const close = () => store.closeContextMenu()
 
@@ -134,6 +134,10 @@ function buildItems(store: ReturnType<typeof useAppStore.getState>, pos: { x: nu
           action: () => { store.startConnecting(primaryId); close() },
         }] : []),
         {
+          keys: ['H'], description: hierarchyMove ? 'Hierarchy move: on' : 'Hierarchy move: off',
+          action: () => { toggleHierarchyMove(); close() },
+        },
+        {
           keys: ['⌫'], description: 'Delete',
           action: () => { store.deleteSelected(); close() },
         },
@@ -178,6 +182,10 @@ function buildItems(store: ReturnType<typeof useAppStore.getState>, pos: { x: nu
           }
           store.addElement(el); store.setSelected(el.id); close()
         },
+      },
+      {
+        keys: ['H'], description: hierarchyMove ? 'Hierarchy move: on' : 'Hierarchy move: off',
+        action: () => { toggleHierarchyMove(); close() },
       },
       { keys: ['scroll'], description: 'Pan' },
       { keys: ['pinch'], description: 'Zoom' },

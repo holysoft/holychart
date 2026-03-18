@@ -340,6 +340,11 @@ export function DiagramCanvas() {
         }
         return
       }
+      if ((e.key === 'h' || e.key === 'H') && !e.metaKey && !e.ctrlKey) {
+        e.preventDefault()
+        useAppStore.getState().toggleHierarchyMove()
+        return
+      }
       if ((e.key === 'n' || e.key === 'N') && (e.metaKey || e.ctrlKey) && e.shiftKey) {
         e.preventDefault()
         useAppStore.getState().createDiagram()
