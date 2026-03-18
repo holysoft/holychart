@@ -51,7 +51,7 @@ function snapshotActive(s: AppState): Diagram {
 
 // ── Persistence ───────────────────────────────────────────────────────────────
 
-const STORAGE_KEY = 'diagramr:v1'
+const STORAGE_KEY = 'holychart:v1'
 
 interface StoredData {
   diagrams: Diagram[]
