@@ -574,7 +574,8 @@ export function render(
   cssH: number,
   theme: string,
   defaultFontSize: number,
-  connectCandidateId: string | null = null
+  connectCandidateId: string | null = null,
+  pendingConnectionStyle: import('../store/types').ConnectionStyle = 'solid'
 ) {
   const tc = getThemeColors()
 
@@ -641,7 +642,7 @@ export function render(
       const targetPos = candEl ? bboxEdgePoint(candEl, elementCenter(fromEl)) : connectionPreviewPos
       const startPos = candEl ? bboxEdgePoint(fromEl, elementCenter(candEl)) : bboxEdgePoint(fromEl, connectionPreviewPos)
       const arrowColor = candEl ? tc.canvasConnectCandidate : tc.canvasConnectionPreview
-      drawArrow(ctx, startPos.x, startPos.y, targetPos.x, targetPos.y, arrowColor, 'dashed')
+      drawArrow(ctx, startPos.x, startPos.y, targetPos.x, targetPos.y, arrowColor, pendingConnectionStyle)
     }
   }
 

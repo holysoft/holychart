@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import type { ViewportState, DiagramElement, ElementId, ToolMode, Theme, ConnectionElement, Diagram } from './types'
+import type { ViewportState, DiagramElement, ElementId, ToolMode, Theme, ConnectionElement, ConnectionStyle, Diagram } from './types'
 import { THEMES } from '../themes'
 
 // ── History helper ────────────────────────────────────────────────────────────
@@ -83,6 +83,7 @@ const EPHEMERAL_RESET = {
   connectingFromId: null,
   connectionPreviewPos: null,
   pendingConnectionFrom: null,
+  pendingConnectionStyle: 'solid' as ConnectionStyle,
   connectCreateMenuPos: null,
   toolMode: 'select' as ToolMode,
   isIconSearchOpen: false,
@@ -125,6 +126,7 @@ interface AppState {
   connectingFromId: ElementId | null
   connectionPreviewPos: { x: number; y: number } | null
   pendingConnectionFrom: ElementId | null
+  pendingConnectionStyle: ConnectionStyle
   connectCreateMenuPos: { screenX: number; screenY: number; worldX: number; worldY: number; fromId: ElementId } | null
   history: HistoryEntry[]
   contextMenuPos: { x: number; y: number } | null
@@ -178,9 +180,11 @@ interface AppState {
   addConnection: (c: ConnectionElement) => void
   deleteConnection: (id: ElementId) => void
   reverseConnection: (id: ElementId) => void
+  pendingConnectionStyle: ConnectionStyle
   startConnecting: (fromId: ElementId) => void
   finishConnecting: (toId: ElementId) => void
   cancelConnecting: () => void
+  cyclePendingConnectionStyle: () => void
   setConnectionPreviewPos: (pos: { x: number; y: number } | null) => void
 }
 
@@ -222,6 +226,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   connectingFromId: null,
   connectionPreviewPos: null,
   pendingConnectionFrom: null,
+  pendingConnectionStyle: 'solid' as ConnectionStyle,
   connectCreateMenuPos: null,
   history: [],
   contextMenuPos: null,
@@ -299,8 +304,9 @@ export const useAppStore = create<AppState>((set, get) => ({
   addElement: (el) => set((s) => {
     const fromId = s.pendingConnectionFrom
     if (fromId && fromId !== el.id) {
-      const conn: ConnectionElement = { id: Math.random().toString(36).slice(2, 10), type: 'connection', fromId, toId: el.id }
-      return withHistory(s, { elements: [...s.elements, el], connections: [...s.connections, conn], pendingConnectionFrom: null })
+      const style = s.pendingConnectionStyle
+      const conn: ConnectionElement = { id: Math.random().toString(36).slice(2, 10), type: 'connection', fromId, toId: el.id, ...(style !== 'solid' ? { style } : {}) }
+      return withHistory(s, { elements: [...s.elements, el], connections: [...s.connections, conn], pendingConnectionFrom: null, pendingConnectionStyle: 'solid' })
     }
     return withHistory(s, { elements: [...s.elements, el], pendingConnectionFrom: null })
   }),
@@ -446,14 +452,20 @@ export const useAppStore = create<AppState>((set, get) => ({
     }
     const exists = connections.some((c) => c.fromId === connectingFromId && c.toId === toId)
     if (!exists) {
-      const newConn: ConnectionElement = { id: Math.random().toString(36).slice(2, 10), type: 'connection', fromId: connectingFromId, toId }
+      const style = get().pendingConnectionStyle
+      const newConn: ConnectionElement = { id: Math.random().toString(36).slice(2, 10), type: 'connection', fromId: connectingFromId, toId, ...(style !== 'solid' ? { style } : {}) }
       set((s) => withHistory(s, { connections: [...s.connections, newConn] }))
     }
-    set({ connectingFromId: null, connectionPreviewPos: null, toolMode: 'select' })
+    set({ connectingFromId: null, connectionPreviewPos: null, toolMode: 'select', pendingConnectionStyle: 'solid' })
   },
   cancelConnecting: () =>
     set({ connectingFromId: null, connectionPreviewPos: null, toolMode: 'select', selectedConnectionId: null }),
   setConnectionPreviewPos: (connectionPreviewPos) => set({ connectionPreviewPos }),
+  cyclePendingConnectionStyle: () => set((s) => {
+    const styles: ConnectionStyle[] = ['solid', 'dashed', 'animated']
+    const next = styles[(styles.indexOf(s.pendingConnectionStyle) + 1) % styles.length]
+    return { pendingConnectionStyle: next }
+  }),
   setPendingConnectionFrom: (id) => set({ pendingConnectionFrom: id }),
   openConnectCreateMenu: (screenX, screenY, worldX, worldY) =>
     set((s) => ({

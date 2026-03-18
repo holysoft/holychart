@@ -162,7 +162,7 @@ export function DiagramCanvas() {
     deleteElement, deleteSelected, deleteConnection, updateConnection,
     openIconSearch, openTextInput, closeTextInput,
     startConnecting, finishConnecting, cancelConnecting, setConnectionPreviewPos,
-    openConnectCreateMenu, setPendingConnectionFrom,
+    openConnectCreateMenu, setPendingConnectionFrom, cyclePendingConnectionStyle,
     pushHistory,
     connectingFromId, connectionPreviewPos,
     copySelected, paste, pasteAt, clipboard,
@@ -186,6 +186,8 @@ export function DiagramCanvas() {
   const connectionPreviewPosRef = useRef(connectionPreviewPos); connectionPreviewPosRef.current = connectionPreviewPos
   const connectionsRef = useRef(connections); connectionsRef.current = connections
   const connectCandidateIdRef = useRef<string | null>(null)
+  const pendingConnectionStyle = useAppStore((s) => s.pendingConnectionStyle)
+  const pendingConnectionStyleRef = useRef(pendingConnectionStyle); pendingConnectionStyleRef.current = pendingConnectionStyle
 
   // Imperatively sets canvas cursor based on current mode, drag state, and hover position
   const updateCursor = useCallback((canvasX: number, canvasY: number) => {
@@ -229,6 +231,7 @@ export function DiagramCanvas() {
       dprRef.current, canvas.offsetWidth, canvas.offsetHeight, themeRef.current,
       useAppStore.getState().defaultFontSize,
       connectCandidateIdRef.current,
+      pendingConnectionStyleRef.current,
     )
     rafRef.current = requestAnimationFrame(renderFrame)
   }, [])
@@ -350,6 +353,11 @@ export function DiagramCanvas() {
         openTextInput((canvas?.offsetWidth ?? 800) / 2, (canvas?.offsetHeight ?? 600) / 2)
       }
       if ((e.key === 's' || e.key === 'S') && !e.metaKey && !e.ctrlKey) {
+        if (connectingFromIdRef.current) {
+          e.preventDefault()
+          cyclePendingConnectionStyle()
+          return
+        }
         const primaryId = selectedIdsRef.current[0]
         if (primaryId) {
           const el = elementsRef.current.find((e) => e.id === primaryId)
@@ -451,7 +459,7 @@ export function DiagramCanvas() {
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [deleteElement, deleteSelected, deleteConnection, updateConnection, openIconSearch, openTextInput, closeTextInput, setSelected, setViewport, startConnecting, cancelConnecting, copySelected, paste, pasteAt, openColorPicker, closeColorPicker, openRename, closeRename, pushHistory, closeContextMenu, openConnectCreateMenu, setPendingConnectionFrom, addElement])
+  }, [deleteElement, deleteSelected, deleteConnection, updateConnection, openIconSearch, openTextInput, closeTextInput, setSelected, setViewport, startConnecting, cancelConnecting, copySelected, paste, pasteAt, openColorPicker, closeColorPicker, openRename, closeRename, pushHistory, closeContextMenu, openConnectCreateMenu, setPendingConnectionFrom, addElement, cyclePendingConnectionStyle])
 
   // Re-evaluate cursor whenever mode changes (box placement, tool mode)
   useEffect(() => {
