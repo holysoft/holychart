@@ -9,6 +9,8 @@ export function Toolbar() {
   const resolvedTheme = useAppStore(selectResolvedTheme)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const workspaceFileInputRef = useRef<HTMLInputElement>(null)
+  const fileMenuBtnRef = useRef<HTMLButtonElement>(null)
+  const [fileMenuOpen, setFileMenuOpen] = useState(false)
   const [pendingWorkspace, setPendingWorkspace] = useState<{ diagrams: Diagram[]; activeDiagramId: string } | null>(null)
 
   const [fontSizeInput, setFontSizeInput] = useState<string | null>(null)
@@ -271,34 +273,75 @@ export function Toolbar() {
         <span style={{ fontSize: 10, minWidth: 36, textAlign: 'left' }}>{theme}</span>
       </ToolBtn>
 
-      {/* Export / Import */}
+      {/* File menu */}
       <Divider />
-      <ToolBtn title="Export diagram tab" onClick={handleExport}>
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
-        </svg>
-      </ToolBtn>
-      <ToolBtn title="Import diagram tab" onClick={() => fileInputRef.current?.click()}>
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/>
-        </svg>
-      </ToolBtn>
       <input ref={fileInputRef} type="file" accept=".holychart.json,.json" onChange={handleImport} style={{ display: 'none' }} />
-
-      <Divider />
-      <ToolBtn title="Export entire workspace" onClick={handleExportWorkspace}>
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-          <rect x="2" y="3" width="20" height="18" rx="2"/><path d="M8 3v18M2 9h6M2 15h6"/><polyline points="14 10 17 13 20 10"/><line x1="17" y1="13" x2="17" y2="7"/>
-        </svg>
-      </ToolBtn>
-      <ToolBtn title="Import workspace (replaces all tabs)" onClick={() => workspaceFileInputRef.current?.click()}>
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-          <rect x="2" y="3" width="20" height="18" rx="2"/><path d="M8 3v18M2 9h6M2 15h6"/><polyline points="14 16 17 13 20 16"/><line x1="17" y1="13" x2="17" y2="19"/>
-        </svg>
-      </ToolBtn>
       <input ref={workspaceFileInputRef} type="file" accept=".holychart.workplace.json,.json" onChange={handleImportWorkspace} style={{ display: 'none' }} />
+      <Tooltip content="Import / Export">
+      <button
+        ref={fileMenuBtnRef}
+        onClick={() => setFileMenuOpen(o => !o)}
+        style={{
+          display: 'flex', alignItems: 'center', gap: 4,
+          background: fileMenuOpen ? 'var(--accent-bg-subtle)' : 'transparent',
+          border: fileMenuOpen ? '1px solid var(--accent-border)' : '1px solid transparent',
+          borderRadius: 'var(--radius-md)',
+          color: fileMenuOpen ? 'var(--accent-light)' : 'var(--text-kbd)',
+          padding: '3px 8px', cursor: 'pointer', fontSize: 12, transition: 'all 0.12s',
+        }}
+      >
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/>
+        </svg>
+      </button>
+      </Tooltip>
 
     </div>
+
+    {fileMenuOpen && (() => {
+      const btn = fileMenuBtnRef.current
+      const r = btn?.getBoundingClientRect()
+      return (
+        <>
+          <div onClick={() => setFileMenuOpen(false)} style={{ position: 'fixed', inset: 0, zIndex: 149 }} />
+          <div style={{
+            position: 'fixed',
+            left: r ? r.left : 0,
+            top: r ? r.bottom + 6 : 0,
+            zIndex: 150,
+            background: 'var(--surface-overlay)',
+            border: '1px solid var(--border-muted)',
+            borderRadius: 'var(--radius-lg)',
+            boxShadow: 'var(--shadow-lg)',
+            backdropFilter: 'var(--backdrop-blur)',
+            padding: '6px 0',
+            minWidth: 200,
+          }}>
+            {([
+              { label: 'Export tab', sub: 'Current diagram as .holychart.json', action: () => { handleExport(); setFileMenuOpen(false) } },
+              { label: 'Import tab', sub: 'Add a .holychart.json as a new tab', action: () => { fileInputRef.current?.click(); setFileMenuOpen(false) } },
+              null,
+              { label: 'Export workspace', sub: 'All tabs as .holychart.workplace.json', action: () => { handleExportWorkspace(); setFileMenuOpen(false) } },
+              { label: 'Import workspace', sub: 'Replace all tabs from a workspace file', action: () => { workspaceFileInputRef.current?.click(); setFileMenuOpen(false) } },
+            ] as const).map((item, i) =>
+              item === null
+                ? <div key={i} style={{ height: 1, background: 'var(--border-subtle)', margin: '4px 0' }} />
+                : <button key={i} onClick={item.action} style={{
+                    display: 'block', width: '100%', textAlign: 'left',
+                    background: 'none', border: 'none', cursor: 'pointer',
+                    padding: '6px 14px', fontFamily: 'var(--font-ui)',
+                  }}
+                  onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.background = 'var(--hover-bg-subtle)' }}
+                  onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.background = 'none' }}
+                >
+                  <div style={{ fontSize: 12, color: 'var(--text)', marginBottom: 1 }}>{item.label}</div>
+                  <div style={{ fontSize: 10, color: 'var(--text-muted)' }}>{item.sub}</div>
+                </button>
+            )}
+          </div>
+        </>
+      )
+    })()}
 
     {pendingWorkspace && (
       <>
