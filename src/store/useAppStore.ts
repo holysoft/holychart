@@ -387,7 +387,10 @@ export const useAppStore = create<AppState>((set, get) => ({
     }),
   openColorPicker: (x, y) => set({ isColorPickerOpen: true, colorPickerPos: { x, y } }),
   closeColorPicker: () => set({ isColorPickerOpen: false }),
-  openRename: (id) => set({ renamingId: id }),
+  openRename: (id) => set((s) => ({
+    history: [...s.history.slice(-(MAX_HISTORY - 1)), { elements: s.elements, connections: s.connections }],
+    renamingId: id,
+  })),
   closeRename: () => set({ renamingId: null }),
 
   // ── Connections ─────────────────────────────────────────────────────────────

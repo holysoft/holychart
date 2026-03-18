@@ -16,7 +16,7 @@ function wrapSelection(ta: HTMLTextAreaElement, marker: string, value: string, s
 }
 
 export function RenameInput() {
-  const { renamingId, closeRename, elements, updateElement, viewport, pushHistory } = useAppStore()
+  const { renamingId, closeRename, elements, updateElement, viewport } = useAppStore()
   const inputRef = useRef<HTMLInputElement | HTMLTextAreaElement>(null)
   const [value, setValue] = useState('')
   const committedRef = useRef(false)
@@ -39,7 +39,6 @@ export function RenameInput() {
   const confirm = () => {
     if (committedRef.current) return
     committedRef.current = true
-    pushHistory()
     const trimmed = value.trim()
     if (el.type === 'text') {
       if (trimmed) {

@@ -49,7 +49,7 @@ function collectContainedIds(seedIds: string[], elements: import('../store/types
 // ── Text input overlay ────────────────────────────────────────────────────────
 
 function TextInputOverlay() {
-  const { textInputPos, closeTextInput, viewport, addElement, setSelected, defaultFontSize, pushHistory } = useAppStore()
+  const { textInputPos, closeTextInput, viewport, addElement, setSelected, defaultFontSize } = useAppStore()
   const [value, setValue] = useState('')
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const committedRef = useRef(false)
@@ -68,7 +68,6 @@ function TextInputOverlay() {
     if (committedRef.current) return
     committedRef.current = true
     if (!value.trim()) { closeTextInput(); return }
-    pushHistory()
     const worldPos = screenToWorld(textInputPos.screenX, textInputPos.screenY, viewport)
     const { width, height } = measureTextElement(value, defaultFontSize)
     const el: TextElement = {
