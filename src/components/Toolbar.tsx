@@ -16,10 +16,14 @@ export function Toolbar() {
   const [pendingWorkspace, setPendingWorkspace] = useState<{ diagrams: Diagram[]; activeDiagramId: string } | null>(null)
 
   const [installPrompt, setInstallPrompt] = useState<BeforeInstallPromptEvent | null>(null)
+  const [isInstalled, setIsInstalled] = useState(window.matchMedia('(display-mode: standalone)').matches)
+  const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent)
   useEffect(() => {
     const handler = (e: Event) => { e.preventDefault(); setInstallPrompt(e as BeforeInstallPromptEvent) }
     window.addEventListener('beforeinstallprompt', handler)
-    return () => window.removeEventListener('beforeinstallprompt', handler)
+    const installed = () => setIsInstalled(true)
+    window.addEventListener('appinstalled', installed)
+    return () => { window.removeEventListener('beforeinstallprompt', handler); window.removeEventListener('appinstalled', installed) }
   }, [])
   const handleInstall = async () => {
     if (!installPrompt) return
@@ -27,6 +31,7 @@ export function Toolbar() {
     const { outcome } = await installPrompt.userChoice
     if (outcome === 'accepted') setInstallPrompt(null)
   }
+  const showInstallButton = !isInstalled && (installPrompt || isSafari)
 
   const [fontSizeInput, setFontSizeInput] = useState<string | null>(null)
   const fontSizeScrollAccum = useRef(0)
@@ -329,10 +334,15 @@ export function Toolbar() {
       </button>
       </Tooltip>
 
-      {installPrompt && (
+      {showInstallButton && (
         <>
           <Divider />
-          <ToolBtn title="Install app" onClick={handleInstall}>
+          <ToolBtn
+            title={isSafari && !installPrompt
+              ? <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>Tap <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg> then &ldquo;Add to Dock&rdquo;</span>
+              : 'Install app'}
+            onClick={installPrompt ? handleInstall : () => {}}
+          >
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <path d="M12 5v14M5 12l7 7 7-7"/>
               <path d="M4 19h16"/>
