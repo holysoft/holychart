@@ -56,7 +56,7 @@ export function ShortcutsHint() {
     modeLabel = 'Canvas'
     shortcuts = [
       { keys: ['Q'], description: 'Add icon' },
-      { keys: ['T'], description: 'Add text' },
+      { keys: ['W'], description: 'Add text' },
       { keys: ['B'], description: 'Add box' },
       { keys: ['scroll'], description: 'Pan' },
       { keys: ['pinch'], description: 'Zoom' },

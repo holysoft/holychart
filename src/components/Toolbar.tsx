@@ -144,7 +144,7 @@ export function Toolbar() {
 
       {/* Text tool */}
       <ToolBtn
-        title="Text tool (T)"
+        title="Text tool (W)"
         onClick={() => { /* T key handles it */ useAppStore.getState().openTextInput(400, 300) }}
         active={toolMode === 'text'}
       >

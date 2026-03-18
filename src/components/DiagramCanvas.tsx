@@ -330,7 +330,7 @@ export function DiagramCanvas() {
           openIconSearch()
         }
       }
-      if ((e.key === 't' || e.key === 'T') && !e.metaKey && !e.ctrlKey) {
+      if ((e.key === 'w' || e.key === 'W') && !e.metaKey && !e.ctrlKey) {
         e.preventDefault()
         if (selectedConnectionIdRef.current) {
           const label = prompt('Connection label (leave blank to clear):') ?? null
