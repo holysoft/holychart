@@ -1,31 +1,34 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { useAppStore } from '../store/useAppStore'
 import { worldToScreen } from '../canvas/ViewportMatrix'
 import { measureTextElement } from '../canvas/textMetrics'
 import { FormatBar } from './FormatBar'
 
-function wrapSelection(ta: HTMLTextAreaElement, marker: string, value: string, setValue: (v: string) => void) {
-  const start = ta.selectionStart ?? 0
-  const end = ta.selectionEnd ?? 0
-  const newVal = value.slice(0, start) + marker + value.slice(start, end) + marker + value.slice(end)
-  setValue(newVal)
-  requestAnimationFrame(() => {
-    ta.selectionStart = start + marker.length
-    ta.selectionEnd = end + marker.length
-  })
-}
 
 export function RenameInput() {
   const { renamingId, closeRename, elements, updateElement, viewport } = useAppStore()
   const inputRef = useRef<HTMLInputElement | HTMLTextAreaElement>(null)
   const [value, setValue] = useState('')
   const committedRef = useRef(false)
+  const taHistoryRef = useRef<string[]>([])
 
   const el = renamingId ? elements.find((e) => e.id === renamingId) : null
+
+  const taRef = inputRef as React.RefObject<HTMLTextAreaElement>
+
+  const applyChange = useCallback((newVal: string, selStart: number, selEnd: number) => {
+    taHistoryRef.current = [...taHistoryRef.current, value]
+    setValue(newVal)
+    requestAnimationFrame(() => {
+      const ta = taRef.current
+      if (ta) { ta.focus(); ta.selectionStart = selStart; ta.selectionEnd = selEnd }
+    })
+  }, [value]) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (!el) return
     committedRef.current = false
+    taHistoryRef.current = []
     const current =
       el.type === 'text' ? el.text
       : el.type === 'box' ? el.text
@@ -66,10 +69,9 @@ export function RenameInput() {
   if (el.type === 'text') {
     // Anchor to element's top-left so resize grows downward naturally
     const screenPos = worldToScreen(el.x, el.y, viewport)
-    const taRef = inputRef as React.RefObject<HTMLTextAreaElement>
     return (
       <div style={{ position: 'fixed', left: screenPos.x, top: screenPos.y, zIndex: 200 }}>
-        <FormatBar value={value} setValue={setValue} taRef={taRef} hint="⌘↵ confirm" />
+        <FormatBar value={value} applyChange={applyChange} taRef={taRef} hint="⌘↵ confirm" />
         <textarea
           ref={taRef}
           value={value}
@@ -78,8 +80,26 @@ export function RenameInput() {
             e.stopPropagation()
             if (e.key === 'Escape') { closeRename(); return }
             if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) { e.preventDefault(); confirm(); return }
-            if ((e.metaKey || e.ctrlKey) && e.key === 'b') { e.preventDefault(); wrapSelection(e.currentTarget, '**', value, setValue); return }
-            if ((e.metaKey || e.ctrlKey) && e.key === 'i') { e.preventDefault(); wrapSelection(e.currentTarget, '*', value, setValue); return }
+            if ((e.metaKey || e.ctrlKey) && (e.key === 'z' || e.key === 'Z') && !e.shiftKey) {
+              e.preventDefault()
+              if (taHistoryRef.current.length > 0) {
+                setValue(taHistoryRef.current[taHistoryRef.current.length - 1])
+                taHistoryRef.current = taHistoryRef.current.slice(0, -1)
+              }
+              return
+            }
+            if ((e.metaKey || e.ctrlKey) && e.key === 'b') {
+              e.preventDefault()
+              const ta = e.currentTarget; const s = ta.selectionStart ?? 0; const en = ta.selectionEnd ?? 0
+              applyChange(value.slice(0, s) + '**' + value.slice(s, en) + '**' + value.slice(en), s + 2, en + 2)
+              return
+            }
+            if ((e.metaKey || e.ctrlKey) && e.key === 'i') {
+              e.preventDefault()
+              const ta = e.currentTarget; const s = ta.selectionStart ?? 0; const en = ta.selectionEnd ?? 0
+              applyChange(value.slice(0, s) + '*' + value.slice(s, en) + '*' + value.slice(en), s + 1, en + 1)
+              return
+            }
           }}
           onBlur={confirm}
           placeholder={'Edit text…'}

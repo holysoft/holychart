@@ -53,11 +53,25 @@ function TextInputOverlay() {
   const [value, setValue] = useState('')
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const committedRef = useRef(false)
+  const taHistoryRef = useRef<string[]>([])
+
+  const applyChange = useCallback((newVal: string, selStart: number, selEnd: number) => {
+    taHistoryRef.current = [...taHistoryRef.current, value]
+    setValue(newVal)
+    requestAnimationFrame(() => {
+      if (textareaRef.current) {
+        textareaRef.current.focus()
+        textareaRef.current.selectionStart = selStart
+        textareaRef.current.selectionEnd = selEnd
+      }
+    })
+  }, [value])
 
   useEffect(() => {
     if (textInputPos) {
       setValue('')
       committedRef.current = false
+      taHistoryRef.current = []
       setTimeout(() => textareaRef.current?.focus(), 30)
     }
   }, [textInputPos])
@@ -81,7 +95,7 @@ function TextInputOverlay() {
 
   return (
     <div style={{ position: 'fixed', left: textInputPos.screenX, top: textInputPos.screenY, zIndex: 200, transform: 'translate(-8px, -8px)' }}>
-      <FormatBar value={value} setValue={setValue} taRef={textareaRef} hint="⌘↵ confirm" />
+      <FormatBar value={value} applyChange={applyChange} taRef={textareaRef} hint="⌘↵ confirm" />
       <textarea
         ref={textareaRef}
         value={value}
@@ -89,18 +103,24 @@ function TextInputOverlay() {
         onKeyDown={(e) => {
           if (e.key === 'Escape') { closeTextInput(); return }
           if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) { e.preventDefault(); confirm(); return }
+          if ((e.metaKey || e.ctrlKey) && (e.key === 'z' || e.key === 'Z') && !e.shiftKey) {
+            e.preventDefault(); e.stopPropagation()
+            if (taHistoryRef.current.length > 0) {
+              setValue(taHistoryRef.current[taHistoryRef.current.length - 1])
+              taHistoryRef.current = taHistoryRef.current.slice(0, -1)
+            }
+            return
+          }
           if ((e.metaKey || e.ctrlKey) && e.key === 'b') {
             e.preventDefault()
             const ta = e.currentTarget; const s = ta.selectionStart ?? 0; const en = ta.selectionEnd ?? 0
-            setValue(value.slice(0, s) + '**' + value.slice(s, en) + '**' + value.slice(en))
-            requestAnimationFrame(() => { ta.selectionStart = s + 2; ta.selectionEnd = en + 2 })
+            applyChange(value.slice(0, s) + '**' + value.slice(s, en) + '**' + value.slice(en), s + 2, en + 2)
             return
           }
           if ((e.metaKey || e.ctrlKey) && e.key === 'i') {
             e.preventDefault()
             const ta = e.currentTarget; const s = ta.selectionStart ?? 0; const en = ta.selectionEnd ?? 0
-            setValue(value.slice(0, s) + '*' + value.slice(s, en) + '*' + value.slice(en))
-            requestAnimationFrame(() => { ta.selectionStart = s + 1; ta.selectionEnd = en + 1 })
+            applyChange(value.slice(0, s) + '*' + value.slice(s, en) + '*' + value.slice(en), s + 1, en + 1)
             return
           }
         }}
