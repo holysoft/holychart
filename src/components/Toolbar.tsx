@@ -138,7 +138,7 @@ export function Toolbar() {
       </Tooltip>
 
       {/* Add icon */}
-      <ToolBtn title="Add icon (I)" onClick={() => openIconSearch()}>
+      <ToolBtn title="Add icon (Q)" onClick={() => openIconSearch()}>
         <IconSvg d="M12 5v14M5 12h14" /> Icon
       </ToolBtn>
 

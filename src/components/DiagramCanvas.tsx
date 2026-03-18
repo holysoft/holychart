@@ -317,7 +317,7 @@ export function DiagramCanvas() {
         }
         return
       }
-      if (e.key === 'i' || e.key === '/') {
+      if (e.key === 'q' || e.key === 'Q') {
         e.preventDefault()
         if (connectingFromIdRef.current) {
           const canvas = canvasRef.current

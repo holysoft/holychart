@@ -55,7 +55,7 @@ export function ShortcutsHint() {
   } else {
     modeLabel = 'Canvas'
     shortcuts = [
-      { keys: ['I', '/'], description: 'Add icon' },
+      { keys: ['Q'], description: 'Add icon' },
       { keys: ['T'], description: 'Add text' },
       { keys: ['B'], description: 'Add box' },
       { keys: ['scroll'], description: 'Pan' },

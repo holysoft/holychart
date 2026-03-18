@@ -164,7 +164,7 @@ function buildItems(store: ReturnType<typeof useAppStore.getState>, pos: { x: nu
         action: () => { store.pasteAt(worldPos.x, worldPos.y); close() },
       }] : []),
       {
-        keys: ['I', '/'], description: 'Add icon',
+        keys: ['Q'], description: 'Add icon',
         action: () => { store.openIconSearch({ x: worldPos.x, y: worldPos.y }); close() },
       },
       {
