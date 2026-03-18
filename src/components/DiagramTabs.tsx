@@ -8,6 +8,7 @@ export function DiagramTabs() {
 
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editValue, setEditValue] = useState('')
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
   const inputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
@@ -27,6 +28,7 @@ export function DiagramTabs() {
   }
 
   return (
+    <>
     <div
       style={{
         position: 'fixed',
@@ -105,7 +107,7 @@ export function DiagramTabs() {
             {diagrams.length > 1 && !isEditing && (
               <Tooltip content="Close diagram">
               <button
-                onClick={(e) => { e.stopPropagation(); deleteDiagram(diagram.id) }}
+                onClick={(e) => { e.stopPropagation(); setConfirmDeleteId(diagram.id) }}
                 style={{
                   background: 'none', border: 'none', cursor: 'pointer',
                   color: 'var(--text-tab-inactive)', fontSize: 13, lineHeight: 1,
@@ -143,5 +145,31 @@ export function DiagramTabs() {
       </button>
       </Tooltip>
     </div>
+
+    {confirmDeleteId && <>
+      <div onClick={() => setConfirmDeleteId(null)} style={{ position: 'fixed', inset: 0, zIndex: 399 }} />
+      <div style={{
+        position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%, -50%)',
+        zIndex: 400, background: 'var(--surface-overlay)', border: '1px solid var(--border-muted)',
+        borderRadius: 'var(--radius-lg)', boxShadow: 'var(--shadow-lg)',
+        backdropFilter: 'var(--backdrop-blur)', padding: '20px 24px', minWidth: 280,
+      }}>
+        <p style={{ fontSize: 14, color: 'var(--text)', marginBottom: 6 }}>
+          Delete <strong>"{diagrams.find(d => d.id === confirmDeleteId)?.name}"</strong>?
+        </p>
+        <p style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 20 }}>This cannot be undone.</p>
+        <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+          <button onClick={() => setConfirmDeleteId(null)} style={{
+            background: 'none', border: '1px solid var(--border-muted)', borderRadius: 'var(--radius-md)',
+            color: 'var(--text-secondary)', padding: '5px 14px', fontSize: 13, cursor: 'pointer', fontFamily: 'var(--font-ui)',
+          }}>Cancel</button>
+          <button onClick={() => { deleteDiagram(confirmDeleteId); setConfirmDeleteId(null) }} style={{
+            background: 'var(--danger-bg)', border: '1px solid var(--danger)', borderRadius: 'var(--radius-md)',
+            color: 'var(--danger)', padding: '5px 14px', fontSize: 13, cursor: 'pointer', fontFamily: 'var(--font-ui)',
+          }}>Delete</button>
+        </div>
+      </div>
+    </>}
+    </>
   )
 }
