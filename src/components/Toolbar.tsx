@@ -125,6 +125,10 @@ export function Toolbar() {
           min={8} max={96}
           onChange={(e) => setFontSizeInput(e.target.value)}
           onBlur={(e) => commitFontSize(e.target.value)}
+          onWheel={(e) => {
+            e.preventDefault()
+            changeFontSize(e.deltaY < 0 ? 1 : -1)
+          }}
           onKeyDown={(e) => {
             e.stopPropagation()
             if (e.key === 'Enter') { commitFontSize((e.target as HTMLInputElement).value); (e.target as HTMLInputElement).blur() }
