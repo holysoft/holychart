@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from 'react'
+import { useState, useCallback } from 'react'
 import { createPortal } from 'react-dom'
 
 interface TooltipProps {
@@ -8,11 +8,11 @@ interface TooltipProps {
 
 export function Tooltip({ content, children }: TooltipProps) {
   const [pos, setPos] = useState<{ x: number; y: number; below: boolean } | null>(null)
-  const ref = useRef<HTMLSpanElement>(null)
 
-  const show = useCallback(() => {
-    if (!ref.current) return
-    const r = ref.current.getBoundingClientRect()
+  const show = useCallback((e: React.MouseEvent) => {
+    // display:contents spans have no box — use the actual hovered child element
+    const el = (e.currentTarget as HTMLElement).firstElementChild as HTMLElement ?? e.currentTarget as HTMLElement
+    const r = el.getBoundingClientRect()
     const below = r.top < window.innerHeight / 3
     setPos({
       x: Math.round(r.left + r.width / 2),
@@ -24,7 +24,7 @@ export function Tooltip({ content, children }: TooltipProps) {
   const hide = useCallback(() => setPos(null), [])
 
   return (
-    <span ref={ref} style={{ display: 'contents' }} onMouseEnter={show} onMouseLeave={hide}>
+    <span style={{ display: 'contents' }} onMouseEnter={show} onMouseLeave={hide}>
       {children}
       {pos && createPortal(
         <div
