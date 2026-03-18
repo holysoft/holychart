@@ -131,6 +131,7 @@ interface AppState {
   renameDiagram: (id: string, name: string) => void
   deleteDiagram: (id: string) => void
   importDiagram: (diagram: Diagram) => void
+  loadWorkspace: (diagrams: Diagram[], activeDiagramId: string) => void
   // Canvas
   setViewport: (vp: ViewportState) => void
   updateViewport: (partial: Partial<ViewportState>) => void
@@ -253,6 +254,21 @@ export const useAppStore = create<AppState>((set, get) => ({
       const idx = s.diagrams.findIndex((d) => d.id === id)
       const fallback = remaining[Math.max(0, idx - 1)]
       const next$ = { diagrams: remaining, activeDiagramId: fallback.id, elements: fallback.elements, connections: fallback.connections, viewport: fallback.viewport, ...EPHEMERAL_RESET }
+      setTimeout(() => flushSave({ ...s, ...next$ }), 0)
+      return next$
+    }),
+  loadWorkspace: (newDiagrams, newActiveId) =>
+    set((s) => {
+      const active = newDiagrams.find((d) => d.id === newActiveId) ?? newDiagrams[0]
+      if (!active) return {}
+      const next$ = {
+        diagrams: newDiagrams,
+        activeDiagramId: active.id,
+        elements: active.elements,
+        connections: active.connections,
+        viewport: active.viewport ?? { panX: 0, panY: 0, zoom: 1, rotation: 0 },
+        ...EPHEMERAL_RESET,
+      }
       setTimeout(() => flushSave({ ...s, ...next$ }), 0)
       return next$
     }),

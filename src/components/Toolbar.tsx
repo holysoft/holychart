@@ -5,9 +5,11 @@ import { Tooltip } from './Tooltip'
 import type { Diagram } from '../store/types'
 
 export function Toolbar() {
-  const { selectedIds, deleteSelected, openIconSearch, viewport, setViewport, theme, toggleTheme, toolMode, rotationEnabled, toggleRotation, hierarchyMove, toggleHierarchyMove, defaultFontSize, setDefaultFontSize, diagrams, activeDiagramId, elements, connections, importDiagram } = useAppStore()
+  const { selectedIds, deleteSelected, openIconSearch, viewport, setViewport, theme, toggleTheme, toolMode, rotationEnabled, toggleRotation, hierarchyMove, toggleHierarchyMove, defaultFontSize, setDefaultFontSize, diagrams, activeDiagramId, elements, connections, importDiagram, loadWorkspace } = useAppStore()
   const resolvedTheme = useAppStore(selectResolvedTheme)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const workspaceFileInputRef = useRef<HTMLInputElement>(null)
+  const [pendingWorkspace, setPendingWorkspace] = useState<{ diagrams: Diagram[]; activeDiagramId: string } | null>(null)
 
   const [fontSizeInput, setFontSizeInput] = useState<string | null>(null)
   const fontSizeScrollAccum = useRef(0)
@@ -65,7 +67,46 @@ export function Toolbar() {
     reader.readAsText(file)
   }
 
+  const handleExportWorkspace = () => {
+    // Snapshot the active diagram before exporting
+    const activeDiagram: Diagram = { id: activeDiagramId, name: diagrams.find(d => d.id === activeDiagramId)?.name ?? 'Untitled', elements, connections, viewport }
+    const allDiagrams = diagrams.map(d => d.id === activeDiagramId ? activeDiagram : d)
+    const workspace = { version: 1, diagrams: allDiagrams, activeDiagramId }
+    const blob = new Blob([JSON.stringify(workspace, null, 2)], { type: 'application/json' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = 'workspace.holychart.workplace.json'
+    a.click()
+    URL.revokeObjectURL(url)
+  }
+
+  const handleImportWorkspace = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    const reader = new FileReader()
+    reader.onload = (evt) => {
+      try {
+        const data = JSON.parse(evt.target?.result as string)
+        const importedDiagrams: Diagram[] = (data.diagrams ?? []).map((d: Partial<Diagram>) => ({
+          id: d.id ?? Math.random().toString(36).slice(2, 10),
+          name: d.name ?? 'Untitled',
+          elements: d.elements ?? [],
+          connections: d.connections ?? [],
+          viewport: d.viewport ?? { panX: 0, panY: 0, zoom: 1, rotation: 0 },
+        }))
+        if (importedDiagrams.length === 0) throw new Error('No diagrams found')
+        setPendingWorkspace({ diagrams: importedDiagrams, activeDiagramId: data.activeDiagramId ?? importedDiagrams[0].id })
+      } catch {
+        alert('Could not read workspace file.')
+      }
+      e.target.value = ''
+    }
+    reader.readAsText(file)
+  }
+
   return (
+    <>
     <div
       style={{
         position: 'fixed',
@@ -232,19 +273,63 @@ export function Toolbar() {
 
       {/* Export / Import */}
       <Divider />
-      <ToolBtn title="Export diagram as JSON" onClick={handleExport}>
+      <ToolBtn title="Export diagram tab" onClick={handleExport}>
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
           <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
         </svg>
       </ToolBtn>
-      <ToolBtn title="Import diagram from JSON" onClick={() => fileInputRef.current?.click()}>
+      <ToolBtn title="Import diagram tab" onClick={() => fileInputRef.current?.click()}>
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
           <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/>
         </svg>
       </ToolBtn>
       <input ref={fileInputRef} type="file" accept=".holychart.json,.json" onChange={handleImport} style={{ display: 'none' }} />
 
+      <Divider />
+      <ToolBtn title="Export entire workspace" onClick={handleExportWorkspace}>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+          <rect x="2" y="3" width="20" height="18" rx="2"/><path d="M8 3v18M2 9h6M2 15h6"/><polyline points="14 10 17 13 20 10"/><line x1="17" y1="13" x2="17" y2="7"/>
+        </svg>
+      </ToolBtn>
+      <ToolBtn title="Import workspace (replaces all tabs)" onClick={() => workspaceFileInputRef.current?.click()}>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+          <rect x="2" y="3" width="20" height="18" rx="2"/><path d="M8 3v18M2 9h6M2 15h6"/><polyline points="14 16 17 13 20 16"/><line x1="17" y1="13" x2="17" y2="19"/>
+        </svg>
+      </ToolBtn>
+      <input ref={workspaceFileInputRef} type="file" accept=".holychart.workplace.json,.json" onChange={handleImportWorkspace} style={{ display: 'none' }} />
+
     </div>
+
+    {pendingWorkspace && (
+      <>
+        <div onClick={() => setPendingWorkspace(null)} style={{ position: 'fixed', inset: 0, zIndex: 399 }} />
+        <div style={{
+          position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%, -50%)',
+          zIndex: 400, background: 'var(--surface-overlay)', border: '1px solid var(--border-muted)',
+          borderRadius: 'var(--radius-lg)', boxShadow: 'var(--shadow-lg)',
+          backdropFilter: 'var(--backdrop-blur)', padding: '20px 24px', minWidth: 300,
+        }}>
+          <p style={{ fontSize: 14, color: 'var(--text)', marginBottom: 6 }}>
+            Replace entire workspace?
+          </p>
+          <p style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 4 }}>
+            This will replace all {diagrams.length} current tab{diagrams.length !== 1 ? 's' : ''} with {pendingWorkspace.diagrams.length} tab{pendingWorkspace.diagrams.length !== 1 ? 's' : ''} from the file.
+          </p>
+          <p style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 20 }}>This cannot be undone.</p>
+          <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+            <button onClick={() => setPendingWorkspace(null)} style={{
+              background: 'none', border: '1px solid var(--border-muted)', borderRadius: 'var(--radius-md)',
+              color: 'var(--text-secondary)', padding: '5px 14px', fontSize: 13, cursor: 'pointer', fontFamily: 'var(--font-ui)',
+            }}>Cancel</button>
+            <button onClick={() => { loadWorkspace(pendingWorkspace.diagrams, pendingWorkspace.activeDiagramId); setPendingWorkspace(null) }} style={{
+              background: 'var(--accent-bg)', border: '1px solid var(--accent-border)', borderRadius: 'var(--radius-md)',
+              color: 'var(--accent-light)', padding: '5px 14px', fontSize: 13, cursor: 'pointer', fontFamily: 'var(--font-ui)',
+            }}>Replace</button>
+          </div>
+        </div>
+      </>
+    )}
+    </>
   )
 }
 
