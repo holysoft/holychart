@@ -2,6 +2,7 @@ import type { DiagramElement, ViewportState, Theme, ConnectionElement, BoxElemen
 import { buildViewportMatrix } from './ViewportMatrix'
 import { getIconImage, loadIcon, themeToHex } from '../icons/iconifyClient'
 import { getThemeColors, type ThemeColors } from '../themes/themeColors'
+import { measureTextElement } from './textMetrics'
 
 const GRID_SIZE = 40
 
@@ -345,22 +346,29 @@ function drawHandles(
 
 // ── Connection rendering ──────────────────────────────────────────────────────
 
+function elementBounds(el: DiagramElement): { width: number; height: number } {
+  if (el.type === 'text') return measureTextElement(el.text, el.fontSize)
+  return { width: el.width, height: el.height }
+}
+
 function elementCenter(el: DiagramElement) {
-  return { x: el.x + el.width / 2, y: el.y + el.height / 2 }
+  const { width, height } = elementBounds(el)
+  return { x: el.x + width / 2, y: el.y + height / 2 }
 }
 
 function bboxEdgePoint(
   el: DiagramElement,
   from: { x: number; y: number }
 ): { x: number; y: number } {
-  const cx = el.x + el.width / 2
-  const cy = el.y + el.height / 2
+  const { width, height } = elementBounds(el)
+  const cx = el.x + width / 2
+  const cy = el.y + height / 2
   const dx = from.x - cx
   const dy = from.y - cy
   if (dx === 0 && dy === 0) return { x: cx, y: cy }
 
-  const hw = el.width / 2 + 4
-  const hh = el.height / 2 + 4
+  const hw = width / 2 + 4
+  const hh = height / 2 + 4
   const sx = Math.abs(dx) > 0 ? hw / Math.abs(dx) : Infinity
   const sy = Math.abs(dy) > 0 ? hh / Math.abs(dy) : Infinity
   const t = Math.min(sx, sy)

@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { useAppStore, selectResolvedTheme } from '../store/useAppStore'
 import { worldToScreen } from '../canvas/ViewportMatrix'
+import { measureTextElement } from '../canvas/textMetrics'
 
 export function RenameInput() {
   const { renamingId, closeRename, elements, updateElement, viewport } = useAppStore()
@@ -26,7 +27,10 @@ export function RenameInput() {
   const confirm = () => {
     const trimmed = value.trim()
     if (el.type === 'text') {
-      if (trimmed) updateElement(renamingId, { text: trimmed } as never)
+      if (trimmed) {
+        const { width, height } = measureTextElement(trimmed, el.fontSize)
+        updateElement(renamingId, { text: trimmed, width, height } as never)
+      }
     } else if (el.type === 'box') {
       updateElement(renamingId, { text: trimmed } as never)
     } else {

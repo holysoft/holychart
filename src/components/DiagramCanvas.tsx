@@ -6,6 +6,7 @@ import { hitTest, hitTestConnection, elementsInRect } from '../canvas/HitTest'
 import { render } from '../canvas/CanvasRenderer'
 import { loadIcon } from '../icons/iconifyClient'
 import type { IconElement, TextElement, BoxElement } from '../store/types'
+import { measureTextElement } from '../canvas/textMetrics'
 
 function genId() {
   return Math.random().toString(36).slice(2, 10)
@@ -61,10 +62,11 @@ function TextInputOverlay() {
   const confirm = () => {
     if (!value.trim()) { closeTextInput(); return }
     const worldPos = screenToWorld(textInputPos.screenX, textInputPos.screenY, viewport)
+    const { width, height } = measureTextElement(value, defaultFontSize)
     const el: TextElement = {
       id: genId(), type: 'text',
       x: worldPos.x, y: worldPos.y,
-      width: 300, height: defaultFontSize * 1.5,
+      width, height,
       text: value, fontSize: defaultFontSize,
     }
     addElement(el); setSelected(el.id); closeTextInput()

@@ -1,4 +1,10 @@
 import type { DiagramElement, ConnectionElement } from '../store/types'
+import { measureTextElement } from './textMetrics'
+
+function elBounds(el: DiagramElement): { width: number; height: number } {
+  if (el.type === 'text') return measureTextElement(el.text, el.fontSize)
+  return { width: el.width, height: el.height }
+}
 
 const HANDLE_RADIUS = 6
 
@@ -17,7 +23,8 @@ export function hitTest(
   if (selectedId) {
     const sel = elements.find((e) => e.id === selectedId)
     if (sel) {
-      const handleIdx = hitHandle(sel, worldX, worldY)
+      const { width, height } = elBounds(sel)
+      const handleIdx = hitHandle({ x: sel.x, y: sel.y, width, height }, worldX, worldY)
       if (handleIdx >= 0) return { kind: 'handle', id: sel.id, handle: handleIdx }
     }
   }
@@ -34,22 +41,22 @@ export function hitTest(
 }
 
 function hitElement(el: DiagramElement, wx: number, wy: number, isSelected = false): boolean {
+  const { width, height } = elBounds(el)
   if (el.type === 'box' && !isSelected) {
-    // Edge-only when not selected — so elements inside still get clicks
     const outer = 6
     const inner = 12
-    const inOuter = wx >= el.x - outer && wx <= el.x + el.width + outer &&
-                    wy >= el.y - outer && wy <= el.y + el.height + outer
-    const inInner = wx > el.x + inner && wx < el.x + el.width - inner &&
-                    wy > el.y + inner && wy < el.y + el.height - inner
+    const inOuter = wx >= el.x - outer && wx <= el.x + width + outer &&
+                    wy >= el.y - outer && wy <= el.y + height + outer
+    const inInner = wx > el.x + inner && wx < el.x + width - inner &&
+                    wy > el.y + inner && wy < el.y + height - inner
     return inOuter && !inInner
   }
   const pad = 4
   return (
     wx >= el.x - pad &&
-    wx <= el.x + el.width + pad &&
+    wx <= el.x + width + pad &&
     wy >= el.y - pad &&
-    wy <= el.y + el.height + pad
+    wy <= el.y + height + pad
   )
 }
 
@@ -66,8 +73,10 @@ export function hitTestConnection(
     const from = elMap.get(conn.fromId)
     const to = elMap.get(conn.toId)
     if (!from || !to) continue
-    const toC = { x: to.x + to.width / 2, y: to.y + to.height / 2 }
-    const fromC = { x: from.x + from.width / 2, y: from.y + from.height / 2 }
+    const { width: fw, height: fh } = elBounds(from)
+    const { width: tw, height: th } = elBounds(to)
+    const toC = { x: to.x + tw / 2, y: to.y + th / 2 }
+    const fromC = { x: from.x + fw / 2, y: from.y + fh / 2 }
     // edge points
     const p1 = bboxEdge(from, toC)
     const p2 = bboxEdge(to, fromC)
@@ -77,10 +86,11 @@ export function hitTestConnection(
 }
 
 function bboxEdge(el: DiagramElement, from: { x: number; y: number }) {
-  const cx = el.x + el.width / 2, cy = el.y + el.height / 2
+  const { width, height } = elBounds(el)
+  const cx = el.x + width / 2, cy = el.y + height / 2
   const dx = from.x - cx, dy = from.y - cy
   if (dx === 0 && dy === 0) return { x: cx, y: cy }
-  const hw = el.width / 2 + 4, hh = el.height / 2 + 4
+  const hw = width / 2 + 4, hh = height / 2 + 4
   const t = Math.min(
     Math.abs(dx) > 0 ? hw / Math.abs(dx) : Infinity,
     Math.abs(dy) > 0 ? hh / Math.abs(dy) : Infinity
