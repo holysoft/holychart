@@ -20,6 +20,7 @@ export interface GestureDelta {
 export interface GestureCallbacks {
   onGestureDelta: (delta: GestureDelta) => void
   onClick?: (x: number, y: number) => void
+  onDoubleClick?: (x: number, y: number) => void
   onDragStart?: (x: number, y: number) => void
   onDragMove?: (dx: number, dy: number, x: number, y: number) => void
   onDragEnd?: (x: number, y: number) => void
@@ -49,6 +50,10 @@ export class GestureController {
   private isDragging = false
   private dragStartPos: PointerPos = { x: 0, y: 0 }
   private lastDragPos: PointerPos = { x: 0, y: 0 }
+
+  // Double-click detection
+  private lastClickTime = 0
+  private lastClickPos: PointerPos = { x: 0, y: 0 }
   private dragStartTime = 0
 
   // Middle-mouse pan state
@@ -267,7 +272,17 @@ export class GestureController {
         const elapsed = Date.now() - this.dragStartTime
         const moved = Math.hypot(pos.x - this.dragStartPos.x, pos.y - this.dragStartPos.y)
         if (elapsed < 400 && moved < 8) {
-          this.callbacks.onClick?.(pos.x, pos.y)
+          const now = Date.now()
+          const timeSinceLast = now - this.lastClickTime
+          const distFromLast = Math.hypot(pos.x - this.lastClickPos.x, pos.y - this.lastClickPos.y)
+          if (timeSinceLast < 400 && distFromLast < 12) {
+            this.callbacks.onDoubleClick?.(pos.x, pos.y)
+            this.lastClickTime = 0 // reset so triple-click doesn't re-trigger
+          } else {
+            this.callbacks.onClick?.(pos.x, pos.y)
+            this.lastClickTime = now
+            this.lastClickPos = { ...pos }
+          }
         }
       }
     }

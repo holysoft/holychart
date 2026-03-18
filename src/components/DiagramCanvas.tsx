@@ -532,6 +532,18 @@ export function DiagramCanvas() {
         setSelectedIds([])
       },
 
+      onDoubleClick: (screenX, screenY) => {
+        const worldPos = screenToWorld(screenX, screenY, vpRef.current)
+        const hit = hitTest(elementsRef.current, worldPos.x, worldPos.y, null)
+        if (hit.kind === 'element') {
+          const el = elementsRef.current.find((e) => e.id === hit.id)
+          if (el?.type === 'text') {
+            setSelected(hit.id)
+            openRename(hit.id)
+          }
+        }
+      },
+
       onDragStart: (screenX, screenY) => {
         if (boxPlacementActiveRef.current) return // preview handled via onMouseDown/onMouseMove
         if (toolModeRef.current !== 'select') return
