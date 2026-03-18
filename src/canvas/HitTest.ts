@@ -22,7 +22,7 @@ export function hitTest(
   // Check handles of selected element first
   if (selectedId) {
     const sel = elements.find((e) => e.id === selectedId)
-    if (sel) {
+    if (sel && sel.type !== 'text') {
       const { width, height } = elBounds(sel)
       const handleIdx = hitHandle({ x: sel.x, y: sel.y, width, height }, worldX, worldY)
       if (handleIdx >= 0) return { kind: 'handle', id: sel.id, handle: handleIdx }

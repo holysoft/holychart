@@ -309,9 +309,7 @@ function drawTextElement(
     ctx.setLineDash([])
     ctx.restore()
 
-    if (showHandles) {
-      drawHandles(ctx, { x: sx, y: sy, width: sw, height: sh }, tc)
-    }
+    // No resize handles for text — dimensions are derived from content
   }
 }
 
