@@ -49,17 +49,23 @@ function collectContainedIds(seedIds: string[], elements: import('../store/types
 
 function TextInputOverlay() {
   const { textInputPos, closeTextInput, viewport, addElement, setSelected, defaultFontSize } = useAppStore()
-  const theme = useAppStore(selectResolvedTheme)
   const [value, setValue] = useState('')
-  const inputRef = useRef<HTMLInputElement>(null)
+  const textareaRef = useRef<HTMLTextAreaElement>(null)
+  const committedRef = useRef(false)
 
   useEffect(() => {
-    if (textInputPos) { setValue(''); setTimeout(() => inputRef.current?.focus(), 30) }
+    if (textInputPos) {
+      setValue('')
+      committedRef.current = false
+      setTimeout(() => textareaRef.current?.focus(), 30)
+    }
   }, [textInputPos])
 
   if (!textInputPos) return null
 
   const confirm = () => {
+    if (committedRef.current) return
+    committedRef.current = true
     if (!value.trim()) { closeTextInput(); return }
     const worldPos = screenToWorld(textInputPos.screenX, textInputPos.screenY, viewport)
     const { width, height } = measureTextElement(value, defaultFontSize)
@@ -74,20 +80,31 @@ function TextInputOverlay() {
 
   return (
     <div style={{ position: 'fixed', left: textInputPos.screenX, top: textInputPos.screenY, zIndex: 200, transform: 'translate(-8px, -8px)' }}>
-      <input
-        ref={inputRef}
+      <textarea
+        ref={textareaRef}
         value={value}
         onChange={(e) => setValue(e.target.value)}
-        onKeyDown={(e) => { if (e.key === 'Enter') confirm(); if (e.key === 'Escape') closeTextInput() }}
+        onKeyDown={(e) => {
+          if (e.key === 'Escape') { closeTextInput(); return }
+          if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) { e.preventDefault(); confirm() }
+        }}
         onBlur={confirm}
-        placeholder="Type text…"
+        placeholder={'Type text…\n(⌘↵ to confirm)'}
         style={{
           background: 'var(--surface-overlay)',
           border: '1px solid var(--accent-border-strong)',
-          borderRadius: 'var(--radius-md)', color: 'var(--text)',
-          fontSize: 16, fontFamily: 'var(--font-ui)',
-          padding: '4px 10px', outline: 'none', minWidth: 180,
+          borderRadius: 'var(--radius-md)',
+          color: 'var(--text)',
+          fontSize: defaultFontSize,
+          fontFamily: 'var(--font-ui)',
+          lineHeight: 1.5,
+          padding: '8px 12px',
+          outline: 'none',
+          width: 280,
+          minHeight: 100,
+          resize: 'both',
           boxShadow: 'var(--shadow-input)',
+          display: 'block',
         }}
       />
     </div>

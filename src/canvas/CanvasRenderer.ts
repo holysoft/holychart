@@ -2,7 +2,7 @@ import type { DiagramElement, ViewportState, Theme, ConnectionElement, BoxElemen
 import { buildViewportMatrix } from './ViewportMatrix'
 import { getIconImage, loadIcon, themeToHex } from '../icons/iconifyClient'
 import { getThemeColors, type ThemeColors } from '../themes/themeColors'
-import { measureTextElement } from './textMetrics'
+import { measureTextElement, TEXT_PAD_X, TEXT_PAD_Y, TEXT_LINE_H } from './textMetrics'
 
 const GRID_SIZE = 40
 
@@ -280,36 +280,52 @@ function drawTextElement(
   fontSize: number,
   tc: ThemeColors
 ) {
+  const lines = el.text.split('\n')
+  const lineH = fontSize * TEXT_LINE_H
+
+  // Compute display bounds fresh from content (guards against stale stored dimensions)
   ctx.font = `${fontSize}px ${tc.fontUi}`
+  const maxLineW = Math.max(...lines.map((l) => ctx.measureText(l || ' ').width))
+  const w = Math.max(120, maxLineW + TEXT_PAD_X * 2)
+  const h = Math.max(40, lines.length * lineH + TEXT_PAD_Y * 2)
+
+  // Card background
+  ctx.fillStyle = tc.canvasLabelBg
+  ctx.beginPath()
+  ctx.roundRect(el.x, el.y, w, h, tc.radiusMd)
+  ctx.fill()
+
+  // Card border
+  ctx.strokeStyle = el.color ?? tc.canvasBoxStroke
+  ctx.lineWidth = tc.canvasStrokeWidth
+  ctx.beginPath()
+  ctx.roundRect(el.x, el.y, w, h, tc.radiusMd)
+  ctx.stroke()
+
+  // Text lines
+  ctx.fillStyle = el.color ?? tc.canvasLabelText
   ctx.textAlign = 'left'
   ctx.textBaseline = 'top'
-  // Draw backing for readability on high-contrast backgrounds
-  if (tc.canvasTextBg !== 'transparent') {
-    const tw = ctx.measureText(el.text).width
-    const th = fontSize * 1.2
-    ctx.fillStyle = tc.canvasTextBg
-    ctx.fillRect(el.x - 3, el.y - 2, tw + 6, th + 4)
-  }
-  ctx.fillStyle = el.color ?? tc.canvasTextStrong
-  ctx.fillText(el.text, el.x, el.y)
+  lines.forEach((line, i) => {
+    ctx.fillText(line, el.x + TEXT_PAD_X, el.y + TEXT_PAD_Y + i * lineH)
+  })
 
   if (selected) {
-    const metrics = ctx.measureText(el.text)
-    const sx = el.x - 4, sy = el.y - 4, sw = metrics.width + 8, sh = fontSize * 1.2 + 8
+    const sx = el.x - 3, sy = el.y - 3, sw = w + 6, sh = h + 6
     ctx.save()
     ctx.fillStyle = tc.canvasMarqueeFill
-    ctx.fillRect(sx, sy, sw, sh)
+    ctx.beginPath()
+    ctx.roundRect(sx, sy, sw, sh, tc.radiusMd)
+    ctx.fill()
     ctx.strokeStyle = tc.accent
     ctx.lineWidth = 1.5
     ctx.setLineDash([4, 3])
-    ctx.beginPath(); ctx.moveTo(sx, sy); ctx.lineTo(sx + sw, sy); ctx.stroke()       // top:    tl → tr
-    ctx.beginPath(); ctx.moveTo(sx, sy); ctx.lineTo(sx, sy + sh); ctx.stroke()       // left:   tl → bl  (same anchor as top)
-    ctx.beginPath(); ctx.moveTo(sx + sw, sy); ctx.lineTo(sx + sw, sy + sh); ctx.stroke() // right:  tr → br
-    ctx.beginPath(); ctx.moveTo(sx, sy + sh); ctx.lineTo(sx + sw, sy + sh); ctx.stroke() // bottom: bl → br
+    ctx.beginPath(); ctx.moveTo(sx, sy); ctx.lineTo(sx + sw, sy); ctx.stroke()
+    ctx.beginPath(); ctx.moveTo(sx, sy); ctx.lineTo(sx, sy + sh); ctx.stroke()
+    ctx.beginPath(); ctx.moveTo(sx + sw, sy); ctx.lineTo(sx + sw, sy + sh); ctx.stroke()
+    ctx.beginPath(); ctx.moveTo(sx, sy + sh); ctx.lineTo(sx + sw, sy + sh); ctx.stroke()
     ctx.setLineDash([])
     ctx.restore()
-
-    // No resize handles for text — dimensions are derived from content
   }
 }
 
