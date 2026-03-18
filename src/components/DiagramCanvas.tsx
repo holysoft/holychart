@@ -316,6 +316,27 @@ export function DiagramCanvas() {
           cancelConnecting()
           const el: BoxElement = { id: genId(), type: 'box', x: wp.x - 120, y: wp.y - 80, width: 240, height: 160, text: '', fontSize: Math.max(11, defaultFontSizeRef.current - 2) }
           addElement(el); setSelected(el.id)
+        } else if (selectedIdsRef.current.length > 0) {
+          // Auto-size box around selected elements
+          const selEls = elementsRef.current.filter((el) => selectedIdsRef.current.includes(el.id))
+          if (selEls.length > 0) {
+            const PAD = 20
+            let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity
+            for (const el of selEls) {
+              const bounds = el.type === 'text' ? measureTextElement(el.text, el.fontSize) : { width: el.width, height: el.height }
+              minX = Math.min(minX, el.x)
+              minY = Math.min(minY, el.y)
+              maxX = Math.max(maxX, el.x + bounds.width)
+              maxY = Math.max(maxY, el.y + bounds.height)
+            }
+            const box: BoxElement = {
+              id: genId(), type: 'box',
+              x: minX - PAD, y: minY - PAD,
+              width: maxX - minX + PAD * 2, height: maxY - minY + PAD * 2,
+              text: '', fontSize: Math.max(11, defaultFontSizeRef.current - 2),
+            }
+            addElement(box); setSelected(box.id)
+          }
         } else {
           boxPlacementActiveRef.current = true
           setBoxPlacementActive(true)
