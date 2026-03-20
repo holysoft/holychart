@@ -526,10 +526,13 @@ function drawConnections(
     ctx.restore()
 
     if (conn.label) {
-      // Place label at the midpoint of the curve (t=0.5)
+      // For bidirectional connections, shift labels apart so they don't overlap.
+      // Both connections use t=0.33 (closer to their own start), which places them
+      // on opposite ends since A→B and B→A travel in opposite directions.
+      const labelT = biOffset !== 0 ? 0.33 : 0.5
       const labelPos = offset !== 0
-        ? connQuadBezierPoint(start.x, start.y, connCurveControlPoint(start.x, start.y, end.x, end.y, offset).cx, connCurveControlPoint(start.x, start.y, end.x, end.y, offset).cy, end.x, end.y, 0.5)
-        : { x: (start.x + end.x) / 2, y: (start.y + end.y) / 2 }
+        ? connQuadBezierPoint(start.x, start.y, connCurveControlPoint(start.x, start.y, end.x, end.y, offset).cx, connCurveControlPoint(start.x, start.y, end.x, end.y, offset).cy, end.x, end.y, labelT)
+        : { x: start.x + (end.x - start.x) * labelT, y: start.y + (end.y - start.y) * labelT }
       const mx = labelPos.x
       const my = labelPos.y
       ctx.save()
