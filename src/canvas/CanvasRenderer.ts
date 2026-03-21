@@ -508,8 +508,18 @@ function drawConnections(
       aimFrom = { x: cp.cx, y: cp.cy }
       aimTo = { x: cp.cx, y: cp.cy }
     }
-    const start = bboxEdgePoint(from, aimFrom)
-    const end = bboxEdgePoint(to, aimTo)
+    let start: { x: number; y: number }
+    let end: { x: number; y: number }
+    if (offset !== 0) {
+      start = bboxEdgePoint(from, aimFrom)
+      end = bboxEdgePoint(to, aimTo)
+    } else {
+      // Straight connections: two-pass so both endpoints face each other.
+      // Fixes arrows going through icons when one element is inside another.
+      const s0 = bboxEdgePoint(from, aimFrom)
+      end = bboxEdgePoint(to, s0)
+      start = bboxEdgePoint(from, end)
+    }
     const selected = conn.id === selectedConnectionId
     const resolvedConn = resolveColor(conn.color, tc)
     const color = resolvedConn ?? (selected ? tc.accent : tc.canvasConnection)

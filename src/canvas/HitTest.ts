@@ -102,8 +102,16 @@ export function hitTestConnection(
       aimFrom = { x: cp.cx, y: cp.cy }
       aimTo = { x: cp.cx, y: cp.cy }
     }
-    const p1 = bboxEdge(from, aimFrom)
-    const p2 = bboxEdge(to, aimTo)
+    let p1: { x: number; y: number }
+    let p2: { x: number; y: number }
+    if (offset !== 0) {
+      p1 = bboxEdge(from, aimFrom)
+      p2 = bboxEdge(to, aimTo)
+    } else {
+      const s0 = bboxEdge(from, aimFrom)
+      p2 = bboxEdge(to, s0)
+      p1 = bboxEdge(from, p2)
+    }
 
     if (offset !== 0) {
       const cp = curveControlPoint(p1.x, p1.y, p2.x, p2.y, offset)
