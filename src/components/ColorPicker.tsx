@@ -63,6 +63,7 @@ export function ColorPicker() {
     selectedConnectionId,
     updateElement, updateConnection,
     elements, connections,
+    isEyedropperActive, activateEyedropper,
   } = useAppStore()
   const selectedId = useAppStore(selectPrimaryId)
   const containerRef = useRef<HTMLDivElement>(null)
@@ -80,7 +81,24 @@ export function ColorPicker() {
     if (!isColorPickerOpen) setCustomOpen(false)
   }, [isColorPickerOpen])
 
+  // Sync local HSV/hex state when color changes externally (e.g. eyedropper)
+  const prevColorRef = useRef(currentHex)
+  useEffect(() => {
+    if (!customOpen || !isColorPickerOpen) return
+    const isConn = !!selectedConnectionId
+    const color = isConn
+      ? (connections.find((c) => c.id === selectedConnectionId)?.color ?? '')
+      : (elements.find((e) => e.id === selectedId)?.color ?? '')
+    if (color && color !== prevColorRef.current) {
+      setHsv(hexToHsv(color))
+      setHexInput(color)
+      prevColorRef.current = color
+    }
+  })
+
   const handleOutside = useCallback((e: MouseEvent) => {
+    // Don't close when clicking on canvas during eyedropper mode
+    if (useAppStore.getState().isEyedropperActive) return
     const ref = customOpen ? customPanelRef : containerRef
     if (ref.current && !ref.current.contains(e.target as Node)) {
       closeColorPicker()
@@ -298,6 +316,30 @@ export function ColorPicker() {
             border: '1px solid var(--border-muted)',
             flexShrink: 0,
           }} />
+          <Tooltip content="Pick from canvas">
+          <button
+            onClick={() => activateEyedropper()}
+            style={{
+              width: 28,
+              height: 28,
+              borderRadius: 'var(--radius-sm)',
+              background: isEyedropperActive ? 'var(--accent-bg)' : 'var(--surface)',
+              border: isEyedropperActive ? '1px solid var(--accent-border-strong)' : '1px solid var(--border-subtle)',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              flexShrink: 0,
+              padding: 0,
+            }}
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ color: isEyedropperActive ? 'var(--accent-text)' : 'var(--text-muted)' }}>
+              <path d="M2 22l1-1h3l9-9" />
+              <path d="M3 21v-3l9-9" />
+              <path d="M15 6l-3-3 1.5-1.5a2.83 2.83 0 0 1 4 0l1 1a2.83 2.83 0 0 1 0 4L17 8" />
+            </svg>
+          </button>
+          </Tooltip>
           <input
             value={hexInput}
             onChange={(e) => {

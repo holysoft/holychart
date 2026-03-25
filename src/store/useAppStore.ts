@@ -89,6 +89,7 @@ const EPHEMERAL_RESET = {
   isIconSearchOpen: false,
   textInputPos: null,
   isColorPickerOpen: false,
+  isEyedropperActive: false,
   renamingId: null,
   history: [] as HistoryEntry[],
   contextMenuPos: null as { x: number; y: number } | null,
@@ -122,6 +123,7 @@ interface AppState {
   clipboard: DiagramElement[]
   isColorPickerOpen: boolean
   colorPickerPos: { x: number; y: number }
+  isEyedropperActive: boolean
   renamingId: string | null
   connectingFromId: ElementId | null
   connectionPreviewPos: { x: number; y: number } | null
@@ -174,6 +176,8 @@ interface AppState {
   pasteAt: (worldX: number, worldY: number) => void
   openColorPicker: (x: number, y: number) => void
   closeColorPicker: () => void
+  activateEyedropper: () => void
+  deactivateEyedropper: () => void
   openRename: (id: string) => void
   closeRename: () => void
   setPendingConnectionFrom: (id: ElementId | null) => void
@@ -226,6 +230,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   textInputPos: null,
   clipboard: [],
   isColorPickerOpen: false,
+  isEyedropperActive: false,
   colorPickerPos: { x: 0, y: 0 },
   renamingId: null,
   connectingFromId: null,
@@ -444,7 +449,9 @@ export const useAppStore = create<AppState>((set, get) => ({
       return withHistory(s, { elements: [...s.elements, ...newEls], selectedIds: newEls.map((e) => e.id) })
     }),
   openColorPicker: (x, y) => set({ isColorPickerOpen: true, colorPickerPos: { x, y } }),
-  closeColorPicker: () => set({ isColorPickerOpen: false }),
+  closeColorPicker: () => set({ isColorPickerOpen: false, isEyedropperActive: false }),
+  activateEyedropper: () => set({ isEyedropperActive: true }),
+  deactivateEyedropper: () => set({ isEyedropperActive: false }),
   openRename: (id) => set((s) => ({
     history: [...s.history.slice(-(MAX_HISTORY - 1)), { elements: s.elements, connections: s.connections }],
     renamingId: id,

@@ -169,6 +169,7 @@ export function DiagramCanvas() {
     openColorPicker, closeColorPicker,
     openRename, closeRename,
     openContextMenu, closeContextMenu,
+    isEyedropperActive, deactivateEyedropper,
   } = useAppStore()
   const theme = useAppStore(selectResolvedTheme)
 
@@ -182,6 +183,7 @@ export function DiagramCanvas() {
   const defaultFontSizeRef = useRef(defaultFontSize); defaultFontSizeRef.current = defaultFontSize
   const connectingFromIdRef = useRef(connectingFromId); connectingFromIdRef.current = connectingFromId
   const selectedConnectionIdRef = useRef(selectedConnectionId); selectedConnectionIdRef.current = selectedConnectionId
+  const isEyedropperRef = useRef(isEyedropperActive); isEyedropperRef.current = isEyedropperActive
   const clipboardRef = useRef(clipboard); clipboardRef.current = clipboard
   const connectionPreviewPosRef = useRef(connectionPreviewPos); connectionPreviewPosRef.current = connectionPreviewPos
   const connectionsRef = useRef(connections); connectionsRef.current = connections
@@ -195,6 +197,7 @@ export function DiagramCanvas() {
     const gc = gestureRef.current
     if (gc?.isPanning) { canvas.style.cursor = 'grabbing'; return }
     if (gc?.isSpaceHeld) { canvas.style.cursor = gc.isSpacePanActive ? 'grabbing' : 'grab'; return }
+    if (isEyedropperRef.current) { canvas.style.cursor = 'crosshair'; return }
     if (boxPlacementActiveRef.current) { canvas.style.cursor = 'crosshair'; return }
     if (toolModeRef.current === 'connect') { canvas.style.cursor = 'crosshair'; return }
     if (toolModeRef.current === 'text') { canvas.style.cursor = 'text'; return }
@@ -461,6 +464,10 @@ export function DiagramCanvas() {
         return
       }
       if (e.key === 'Escape') {
+        if (isEyedropperRef.current) {
+          useAppStore.getState().deactivateEyedropper()
+          return
+        }
         if (boxPlacementActiveRef.current) {
           boxPlacementActiveRef.current = false
           setBoxPlacementActive(false)
@@ -507,6 +514,22 @@ export function DiagramCanvas() {
     const canvasX = e.clientX - rect.left
     const canvasY = e.clientY - rect.top
     if (canvas) updateCursor(canvasX, canvasY)
+    // Eyedropper: live-sample pixel color under cursor
+    if (isEyedropperRef.current && canvas) {
+      const ctx = canvas.getContext('2d')
+      if (ctx) {
+        const dpr = dprRef.current
+        const px = Math.round(canvasX * dpr)
+        const py = Math.round(canvasY * dpr)
+        const pixel = ctx.getImageData(px, py, 1, 1).data
+        const hex = '#' + [pixel[0], pixel[1], pixel[2]]
+          .map(v => v.toString(16).padStart(2, '0')).join('')
+        const s = useAppStore.getState()
+        const primaryId = s.selectedIds[0] ?? null
+        if (primaryId) s.updateElement(primaryId, { color: hex })
+        else if (s.selectedConnectionId) s.updateConnection(s.selectedConnectionId, { color: hex })
+      }
+    }
     if (boxPlacementActiveRef.current && boxDrawPreviewWorldRef.current) {
       const wp = screenToWorld(canvasX, canvasY, vpRef.current)
       boxDrawPreviewWorldRef.current = { ...boxDrawPreviewWorldRef.current, x2: wp.x, y2: wp.y }
@@ -555,6 +578,7 @@ export function DiagramCanvas() {
 
     const ctrl = new GestureController(canvas, {
       onGestureDelta: (delta) => {
+        if (isEyedropperRef.current) return // don't pan/zoom during eyedropper
         // Pinch-to-resize: if pinching inside a selected element, resize it (touch + desktop)
         if (delta.deltaZoom !== 1 && selectedIdsRef.current.length > 0) {
           const wp = screenToWorld(delta.originX, delta.originY, vpRef.current)
@@ -581,6 +605,26 @@ export function DiagramCanvas() {
       },
 
       onClick: (screenX, screenY) => {
+        // Eyedropper: sample pixel color from canvas
+        if (isEyedropperRef.current) {
+          const canvas = canvasRef.current
+          if (!canvas) return
+          const ctx = canvas.getContext('2d')
+          if (!ctx) return
+          const dpr = dprRef.current
+          const px = Math.round(screenX * dpr)
+          const py = Math.round(screenY * dpr)
+          const pixel = ctx.getImageData(px, py, 1, 1).data
+          const hex = '#' + [pixel[0], pixel[1], pixel[2]]
+            .map(v => v.toString(16).padStart(2, '0')).join('')
+          const s = useAppStore.getState()
+          const primaryId = s.selectedIds[0] ?? null
+          if (primaryId) s.updateElement(primaryId, { color: hex })
+          else if (s.selectedConnectionId) s.updateConnection(s.selectedConnectionId, { color: hex })
+          s.deactivateEyedropper()
+          return
+        }
+
         const worldPos = screenToWorld(screenX, screenY, vpRef.current)
 
         if (boxPlacementActiveRef.current) {
@@ -652,6 +696,7 @@ export function DiagramCanvas() {
       },
 
       onDragStart: (screenX, screenY, isDoubleTapDrag) => {
+        if (isEyedropperRef.current) return // eyedropper: don't start element drags
         if (boxPlacementActiveRef.current) return // preview handled via onMouseDown/onMouseMove
         if (toolModeRef.current !== 'select') return
         const worldPos = screenToWorld(screenX, screenY, vpRef.current)
@@ -701,6 +746,24 @@ export function DiagramCanvas() {
       },
 
       onDragMove: (_dx, _dy, screenX, screenY) => {
+        // Eyedropper: live-sample pixel color during touch drag
+        if (isEyedropperRef.current) {
+          const canvas = canvasRef.current
+          if (!canvas) return
+          const ctx = canvas.getContext('2d')
+          if (!ctx) return
+          const dpr = dprRef.current
+          const px = Math.round(screenX * dpr)
+          const py = Math.round(screenY * dpr)
+          const pixel = ctx.getImageData(px, py, 1, 1).data
+          const hex = '#' + [pixel[0], pixel[1], pixel[2]]
+            .map(v => v.toString(16).padStart(2, '0')).join('')
+          const s = useAppStore.getState()
+          const primaryId = s.selectedIds[0] ?? null
+          if (primaryId) s.updateElement(primaryId, { color: hex })
+          else if (s.selectedConnectionId) s.updateConnection(s.selectedConnectionId, { color: hex })
+          return
+        }
         if (boxPlacementActiveRef.current) return // preview handled by React onMouseMove
         const ds = dragStateRef.current; if (!ds) return
         const worldPos = screenToWorld(screenX, screenY, vpRef.current)
@@ -754,6 +817,11 @@ export function DiagramCanvas() {
       },
 
       onDragEnd: (screenX, screenY) => {
+        // Eyedropper: finalize on touch drag end
+        if (isEyedropperRef.current) {
+          useAppStore.getState().deactivateEyedropper()
+          return
+        }
         if (boxPlacementActiveRef.current) {
           const canvas = canvasRef.current
           const canvasRect = canvas?.getBoundingClientRect() ?? { left: 0, top: 0 }
