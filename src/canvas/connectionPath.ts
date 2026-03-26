@@ -86,8 +86,13 @@ export function distToQuadBezier(
   x1: number, y1: number,
   cx: number, cy: number,
   x2: number, y2: number,
-  samples = 20
+  samples?: number
 ): number {
+  if (samples === undefined) {
+    const arcEstimate = (Math.hypot(cx - x1, cy - y1) + Math.hypot(x2 - cx, y2 - cy)
+      + Math.hypot(x2 - x1, y2 - y1)) / 2
+    samples = Math.max(20, Math.ceil(arcEstimate / 8))
+  }
   let minDist = Infinity
   for (let i = 0; i <= samples; i++) {
     const t = i / samples
@@ -317,8 +322,13 @@ export function distToCubicBezier(
   cp1x: number, cp1y: number,
   cp2x: number, cp2y: number,
   x2: number, y2: number,
-  samples = 24
+  samples?: number
 ): number {
+  if (samples === undefined) {
+    const arcEstimate = (Math.hypot(cp1x - x1, cp1y - y1) + Math.hypot(cp2x - cp1x, cp2y - cp1y)
+      + Math.hypot(x2 - cp2x, y2 - cp2y) + Math.hypot(x2 - x1, y2 - y1)) / 2
+    samples = Math.max(24, Math.ceil(arcEstimate / 8))
+  }
   let minDist = Infinity
   for (let i = 0; i <= samples; i++) {
     const t = i / samples

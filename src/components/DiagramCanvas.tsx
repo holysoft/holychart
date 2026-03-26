@@ -189,6 +189,8 @@ export function DiagramCanvas() {
   const connectionPreviewPosRef = useRef(connectionPreviewPos); connectionPreviewPosRef.current = connectionPreviewPos
   const connectionsRef = useRef(connections); connectionsRef.current = connections
   const connectCandidateIdRef = useRef<string | null>(null)
+  const hoveredElementIdRef = useRef<string | null>(null)
+  const hoveredConnectionIdRef = useRef<string | null>(null)
   const pendingConnectionStyle = useAppStore((s) => s.pendingConnectionStyle)
   const pendingConnectionStyleRef = useRef(pendingConnectionStyle); pendingConnectionStyleRef.current = pendingConnectionStyle
   const connectionRoutingRef = useRef(connectionRouting); connectionRoutingRef.current = connectionRouting
@@ -197,21 +199,34 @@ export function DiagramCanvas() {
   const updateCursor = useCallback((canvasX: number, canvasY: number) => {
     const canvas = canvasRef.current; if (!canvas) return
     const gc = gestureRef.current
-    if (gc?.isPanning) { canvas.style.cursor = 'grabbing'; return }
-    if (gc?.isSpaceHeld) { canvas.style.cursor = gc.isSpacePanActive ? 'grabbing' : 'grab'; return }
-    if (isEyedropperRef.current) { canvas.style.cursor = 'crosshair'; return }
-    if (boxPlacementActiveRef.current) { canvas.style.cursor = 'crosshair'; return }
-    if (toolModeRef.current === 'connect') { canvas.style.cursor = 'crosshair'; return }
-    if (toolModeRef.current === 'text') { canvas.style.cursor = 'text'; return }
+    if (gc?.isPanning || gc?.isSpaceHeld || isEyedropperRef.current || boxPlacementActiveRef.current
+      || toolModeRef.current === 'connect' || toolModeRef.current === 'text') {
+      hoveredElementIdRef.current = null; hoveredConnectionIdRef.current = null
+      if (gc?.isPanning) { canvas.style.cursor = 'grabbing'; return }
+      if (gc?.isSpaceHeld) { canvas.style.cursor = gc.isSpacePanActive ? 'grabbing' : 'grab'; return }
+      if (isEyedropperRef.current) { canvas.style.cursor = 'crosshair'; return }
+      if (boxPlacementActiveRef.current) { canvas.style.cursor = 'crosshair'; return }
+      if (toolModeRef.current === 'connect') { canvas.style.cursor = 'crosshair'; return }
+      canvas.style.cursor = 'text'; return
+    }
     const ds = dragStateRef.current
-    if (ds?.kind === 'move') { canvas.style.cursor = 'grabbing'; return }
-    if (ds?.kind === 'resize') { canvas.style.cursor = HANDLE_CURSORS[ds.handle]; return }
-    if (ds?.kind === 'marquee') { canvas.style.cursor = 'default'; return }
+    if (ds?.kind === 'move' || ds?.kind === 'resize' || ds?.kind === 'marquee') {
+      hoveredElementIdRef.current = null; hoveredConnectionIdRef.current = null
+      if (ds?.kind === 'move') { canvas.style.cursor = 'grabbing'; return }
+      if (ds?.kind === 'resize') { canvas.style.cursor = HANDLE_CURSORS[ds.handle]; return }
+      canvas.style.cursor = 'default'; return
+    }
     const worldPos = screenToWorld(canvasX, canvasY, vpRef.current)
     const hit = hitTest(elementsRef.current, worldPos.x, worldPos.y, selectedIdsRef.current[0] ?? null)
-    if (hit.kind === 'handle') { canvas.style.cursor = HANDLE_CURSORS[hit.handle]; return }
-    if (hit.kind === 'element') { canvas.style.cursor = 'move'; return }
+    if (hit.kind === 'handle') { hoveredElementIdRef.current = null; hoveredConnectionIdRef.current = null; canvas.style.cursor = HANDLE_CURSORS[hit.handle]; return }
+    if (hit.kind === 'element') {
+      hoveredElementIdRef.current = hit.id
+      hoveredConnectionIdRef.current = null
+      canvas.style.cursor = 'move'; return
+    }
+    hoveredElementIdRef.current = null
     const connId = hitTestConnection(connectionsRef.current, elementsRef.current, worldPos.x, worldPos.y, 8, connectionRoutingRef.current)
+    hoveredConnectionIdRef.current = connId
     canvas.style.cursor = connId ? 'pointer' : 'default'
   }, [])
 
@@ -238,6 +253,8 @@ export function DiagramCanvas() {
       connectCandidateIdRef.current,
       pendingConnectionStyleRef.current,
       connectionRoutingRef.current,
+      hoveredElementIdRef.current,
+      hoveredConnectionIdRef.current,
     )
     rafRef.current = requestAnimationFrame(renderFrame)
   }, [])

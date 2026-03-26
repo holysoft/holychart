@@ -160,7 +160,8 @@ function drawBoxElement(
   showHandles: boolean,
   _theme: Theme,
   fontSize: number,
-  tc: ThemeColors
+  tc: ThemeColors,
+  hovered = false,
 ) {
   const boxStyle = el.style ?? 'solid'
   const resolved = resolveColor(el.color, tc)
@@ -240,8 +241,9 @@ function drawBoxElement(
 
   // Glow shadow on the colored stroke only
   if (tc.canvasGlowBlur > 0) {
-    ctx.shadowColor = glowColor
-    ctx.shadowBlur = resolved ? tc.canvasGlowBlur * 2.3 : tc.canvasGlowBlur
+    const baseBlur = resolved ? tc.canvasGlowBlur * 2.3 : tc.canvasGlowBlur
+    ctx.shadowColor = resolved ?? glowColor
+    ctx.shadowBlur = hovered ? baseBlur + 8 : baseBlur
   }
 
   // Colored stroke
@@ -477,7 +479,8 @@ function drawConnections(
   fontSize: number,
   tc: ThemeColors,
   connectedConnectionIds: Set<string> | null = null,
-  routing: ConnectionRouting = 'straight'
+  routing: ConnectionRouting = 'straight',
+  hoveredConnectionId: string | null = null,
 ) {
   const elMap = new Map(elements.map((e) => [e.id, e]))
   // Collect icon elements for avoidance routing
@@ -533,6 +536,7 @@ function drawConnections(
       start = bboxEdgePoint(from, end)
     }
     const selected = conn.id === selectedConnectionId
+    const hovered = conn.id === hoveredConnectionId && !selected
     const resolvedConn = resolveColor(conn.color, tc)
     const color = resolvedConn ?? (selected ? tc.accent : tc.canvasConnection)
 
@@ -549,6 +553,9 @@ function drawConnections(
     if (selected && tc.canvasGlowBlur > 0) {
       ctx.shadowColor = resolvedConn ?? tc.accent
       ctx.shadowBlur = 10
+    } else if (hovered && tc.canvasGlowBlur > 0) {
+      ctx.shadowColor = resolvedConn ?? tc.accent
+      ctx.shadowBlur = 8
     }
     drawArrow(ctx, start.x, start.y, end.x, end.y, color, conn.style ?? 'solid', 1.5, offset, routing)
     ctx.restore()
@@ -714,7 +721,9 @@ export function render(
   defaultFontSize: number,
   connectCandidateId: string | null = null,
   pendingConnectionStyle: import('../store/types').ConnectionStyle = 'solid',
-  connectionRouting: ConnectionRouting = 'straight'
+  connectionRouting: ConnectionRouting = 'straight',
+  hoveredElementId: string | null = null,
+  hoveredConnectionId: string | null = null,
 ) {
   const tc = getThemeColors()
 
@@ -744,6 +753,12 @@ export function render(
         connectedConnectionIds.add(conn.id)
       }
     }
+  } else if (selectedConnectionId) {
+    const selConn = connections.find((c) => c.id === selectedConnectionId)
+    if (selConn) {
+      connectedIdSet = new Set([selConn.fromId, selConn.toId])
+      connectedConnectionIds = new Set([selectedConnectionId])
+    }
   }
 
   const DIM_ALPHA = 0.25
@@ -761,18 +776,24 @@ export function render(
       ctx.globalAlpha = DIM_ALPHA
     }
     const sel = selectedIds.includes(el.id)
+    const hovered = el.id === hoveredElementId && !sel
     const showHandles = sel && selectedIds.length === 1
+    // Hover glow — applied here for icons/text (boxes handle it internally)
+    if (hovered && el.type !== 'box' && tc.canvasGlowBlur > 0) {
+      ctx.shadowColor = resolveColor(el.color, tc) ?? tc.accent
+      ctx.shadowBlur = 8
+    }
     if (el.type === 'icon') {
       drawIconElement(ctx, el, sel, showHandles, theme, defaultFontSize, tc)
     } else if (el.type === 'text') {
       drawTextElement(ctx, el, sel, showHandles, theme, defaultFontSize, tc)
     } else if (el.type === 'box') {
-      drawBoxElement(ctx, el, sel, showHandles, theme, defaultFontSize, tc)
+      drawBoxElement(ctx, el, sel, showHandles, theme, defaultFontSize, tc, hovered)
     }
     ctx.restore()
   }
 
-  drawConnections(ctx, connections, elements, selectedConnectionId, theme, defaultFontSize, tc, connectedConnectionIds, connectionRouting)
+  drawConnections(ctx, connections, elements, selectedConnectionId, theme, defaultFontSize, tc, connectedConnectionIds, connectionRouting, hoveredConnectionId)
 
   // Highlight connect candidate with connection-preview color outline
   if (connectCandidateId) {
