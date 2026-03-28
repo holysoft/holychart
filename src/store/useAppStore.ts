@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import type { ViewportState, DiagramElement, ElementId, ToolMode, Theme, ConnectionElement, ConnectionStyle, ConnectionRouting, Diagram } from './types'
+import type { ViewportState, DiagramElement, ElementId, ToolMode, Theme, ConnectionElement, ConnectionStyle, ConnectionRouting, Diagram, RenameTarget } from './types'
 import { THEMES } from '../themes'
 
 // ── History helper ────────────────────────────────────────────────────────────
@@ -91,7 +91,7 @@ const EPHEMERAL_RESET = {
   textInputPos: null,
   isColorPickerOpen: false,
   isEyedropperActive: false,
-  renamingId: null,
+  renamingTarget: null as RenameTarget | null,
   history: [] as HistoryEntry[],
   connectionStyleMenuPos: null as { screenX: number; screenY: number; connectionId: ElementId | null } | null,
   contextMenuPos: null as { x: number; y: number } | null,
@@ -126,7 +126,7 @@ interface AppState {
   isColorPickerOpen: boolean
   colorPickerPos: { x: number; y: number }
   isEyedropperActive: boolean
-  renamingId: string | null
+  renamingTarget: RenameTarget | null
   connectingFromId: ElementId | null
   connectionPreviewPos: { x: number; y: number } | null
   pendingConnectionFrom: ElementId | null
@@ -182,7 +182,7 @@ interface AppState {
   closeColorPicker: () => void
   activateEyedropper: () => void
   deactivateEyedropper: () => void
-  openRename: (id: string) => void
+  openRename: (id: string, kind?: RenameTarget['kind']) => void
   closeRename: () => void
   setPendingConnectionFrom: (id: ElementId | null) => void
   openConnectCreateMenu: (screenX: number, screenY: number, worldX: number, worldY: number) => void
@@ -240,7 +240,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   isColorPickerOpen: false,
   isEyedropperActive: false,
   colorPickerPos: { x: 0, y: 0 },
-  renamingId: null,
+  renamingTarget: null,
   connectingFromId: null,
   connectionPreviewPos: null,
   pendingConnectionFrom: null,
@@ -462,11 +462,13 @@ export const useAppStore = create<AppState>((set, get) => ({
   closeColorPicker: () => set({ isColorPickerOpen: false, isEyedropperActive: false }),
   activateEyedropper: () => set({ isEyedropperActive: true }),
   deactivateEyedropper: () => set({ isEyedropperActive: false }),
-  openRename: (id) => set((s) => ({
-    history: [...s.history.slice(-(MAX_HISTORY - 1)), { elements: s.elements, connections: s.connections }],
-    renamingId: id,
+  openRename: (id, kind = 'element') => set((s) => ({
+    ...(kind === 'element'
+      ? { history: [...s.history.slice(-(MAX_HISTORY - 1)), { elements: s.elements, connections: s.connections }] }
+      : {}),
+    renamingTarget: { id, kind },
   })),
-  closeRename: () => set({ renamingId: null }),
+  closeRename: () => set({ renamingTarget: null }),
 
   // ── Connections ─────────────────────────────────────────────────────────────
 

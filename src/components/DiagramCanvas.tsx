@@ -382,8 +382,7 @@ export function DiagramCanvas() {
       if ((e.key === 'w' || e.key === 'W') && !e.metaKey && !e.ctrlKey) {
         e.preventDefault()
         if (selectedConnectionIdRef.current) {
-          const label = prompt('Connection label (leave blank to clear):') ?? null
-          if (label !== null) updateConnection(selectedConnectionIdRef.current, { label: label || undefined })
+          openRename(selectedConnectionIdRef.current, 'connection')
           return
         }
         if (connectingFromIdRef.current) {
@@ -438,8 +437,7 @@ export function DiagramCanvas() {
       if ((e.key === 'r' || e.key === 'R') && !e.metaKey && !e.ctrlKey) {
         if (selectedConnectionIdRef.current) {
           e.preventDefault()
-          const label = prompt('Connection label (leave blank to clear):') ?? null
-          if (label !== null) updateConnection(selectedConnectionIdRef.current, { label: label || undefined })
+          openRename(selectedConnectionIdRef.current, 'connection')
           return
         }
       }

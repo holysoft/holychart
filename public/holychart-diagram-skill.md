@@ -1,3 +1,8 @@
+---
+  name: holy-chart
+  description: This skill allows you to create software architecture diagrams via holychart. Users will be able to open the charts at holychart.com
+---
+
 # HolyChart Diagram Authoring Guide
 
 Use this skill when creating or modifying HolyChart diagrams programmatically — generating `.holychart.json` files or constructing diagram data structures for the ai-diagrammer app.

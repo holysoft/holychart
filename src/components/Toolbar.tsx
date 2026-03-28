@@ -4,6 +4,12 @@ import { resetRotation } from '../canvas/ViewportMatrix'
 import { Tooltip } from './Tooltip'
 import type { Diagram } from '../store/types'
 
+const DEFAULT_VIEWPORT = { panX: 0, panY: 0, zoom: 1, rotation: 0 }
+
+type PendingImport =
+  | { kind: 'diagram'; fileName: string; diagram: Diagram }
+  | { kind: 'workspace'; fileName: string; diagrams: Diagram[]; activeDiagramId: string }
+
 export function Toolbar() {
   const { selectedIds, deleteSelected, openIconSearch, viewport, setViewport, theme, toggleTheme, toolMode, rotationEnabled, toggleRotation, hierarchyMove, toggleHierarchyMove, connectionRouting, setConnectionRouting, defaultFontSize, setDefaultFontSize, diagrams, activeDiagramId, elements, connections, importDiagram, loadWorkspace } = useAppStore()
   const resolvedTheme = useAppStore(selectResolvedTheme)
@@ -13,7 +19,9 @@ export function Toolbar() {
   const importBtnRef = useRef<HTMLButtonElement>(null)
   const [exportMenuOpen, setExportMenuOpen] = useState(false)
   const [importMenuOpen, setImportMenuOpen] = useState(false)
-  const [pendingWorkspace, setPendingWorkspace] = useState<{ diagrams: Diagram[]; activeDiagramId: string } | null>(null)
+  const [pendingImport, setPendingImport] = useState<PendingImport | null>(null)
+  const [isDropTargetActive, setIsDropTargetActive] = useState(false)
+  const dragDepthRef = useRef(0)
 
   const aiSkillBtnRef = useRef<HTMLButtonElement>(null)
   const [aiSkillMenuOpen, setAiSkillMenuOpen] = useState(false)
@@ -69,27 +77,23 @@ export function Toolbar() {
     URL.revokeObjectURL(url)
   }
 
-  const handleImport = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const loadImportFile = async (file: File) => {
+    const parsed = parseImportFile(await file.text(), file.name)
+    setPendingImport(parsed)
+  }
+
+  const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
-    if (!file) return
-    const reader = new FileReader()
-    reader.onload = (evt) => {
-      try {
-        const data = JSON.parse(evt.target?.result as string) as Partial<Diagram>
-        importDiagram({
-          id: '',
-          name: data.name ?? file.name.replace(/\.holychart\.json$/i, '').replace(/\.json$/i, ''),
-          elements: data.elements ?? [],
-          connections: data.connections ?? [],
-          viewport: data.viewport ?? { panX: 0, panY: 0, zoom: 1, rotation: 0 },
-        })
-      } catch {
-        alert('Could not read diagram file.')
-      }
-      // Reset so the same file can be re-imported
+    if (!file) {
       e.target.value = ''
+      return
     }
-    reader.readAsText(file)
+    try {
+      await loadImportFile(file)
+    } catch {
+      alert('Could not read chart file.')
+    }
+    e.target.value = ''
   }
 
   const handleExportWorkspace = () => {
@@ -106,28 +110,87 @@ export function Toolbar() {
     URL.revokeObjectURL(url)
   }
 
-  const handleImportWorkspace = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImportWorkspace = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
-    if (!file) return
-    const reader = new FileReader()
-    reader.onload = (evt) => {
-      try {
-        const data = JSON.parse(evt.target?.result as string)
-        const importedDiagrams: Diagram[] = (data.diagrams ?? []).map((d: Partial<Diagram>) => ({
-          id: d.id ?? Math.random().toString(36).slice(2, 10),
-          name: d.name ?? 'Untitled',
-          elements: d.elements ?? [],
-          connections: d.connections ?? [],
-          viewport: d.viewport ?? { panX: 0, panY: 0, zoom: 1, rotation: 0 },
-        }))
-        if (importedDiagrams.length === 0) throw new Error('No diagrams found')
-        setPendingWorkspace({ diagrams: importedDiagrams, activeDiagramId: data.activeDiagramId ?? importedDiagrams[0].id })
-      } catch {
-        alert('Could not read workspace file.')
-      }
+    if (!file) {
       e.target.value = ''
+      return
     }
-    reader.readAsText(file)
+    try {
+      await loadImportFile(file)
+    } catch {
+      alert('Could not read workspace file.')
+    }
+    e.target.value = ''
+  }
+
+  useEffect(() => {
+    const resetDropTarget = () => {
+      dragDepthRef.current = 0
+      setIsDropTargetActive(false)
+    }
+
+    const handleDragEnter = (e: DragEvent) => {
+      if (!hasFiles(e.dataTransfer)) return
+      e.preventDefault()
+      dragDepthRef.current += 1
+      setIsDropTargetActive(true)
+      setExportMenuOpen(false)
+      setImportMenuOpen(false)
+      setAiSkillMenuOpen(false)
+    }
+
+    const handleDragOver = (e: DragEvent) => {
+      if (!hasFiles(e.dataTransfer)) return
+      e.preventDefault()
+      if (e.dataTransfer) e.dataTransfer.dropEffect = 'copy'
+    }
+
+    const handleDragLeave = (e: DragEvent) => {
+      if (!hasFiles(e.dataTransfer)) return
+      e.preventDefault()
+      dragDepthRef.current = Math.max(0, dragDepthRef.current - 1)
+      if (dragDepthRef.current === 0) setIsDropTargetActive(false)
+    }
+
+    const handleDrop = (e: DragEvent) => {
+      if (!hasFiles(e.dataTransfer)) return
+      e.preventDefault()
+      resetDropTarget()
+      const files = Array.from(e.dataTransfer?.files ?? [])
+      if (files.length === 0) return
+      if (files.length > 1) {
+        alert('Drop one chart or workspace file at a time.')
+        return
+      }
+      void loadImportFile(files[0]).catch(() => {
+        alert('Could not read dropped file.')
+      })
+    }
+
+    window.addEventListener('dragenter', handleDragEnter)
+    window.addEventListener('dragover', handleDragOver)
+    window.addEventListener('dragleave', handleDragLeave)
+    window.addEventListener('drop', handleDrop)
+    window.addEventListener('blur', resetDropTarget)
+
+    return () => {
+      window.removeEventListener('dragenter', handleDragEnter)
+      window.removeEventListener('dragover', handleDragOver)
+      window.removeEventListener('dragleave', handleDragLeave)
+      window.removeEventListener('drop', handleDrop)
+      window.removeEventListener('blur', resetDropTarget)
+    }
+  }, [])
+
+  const confirmPendingImport = () => {
+    if (!pendingImport) return
+    if (pendingImport.kind === 'diagram') {
+      importDiagram(pendingImport.diagram)
+    } else {
+      loadWorkspace(pendingImport.diagrams, pendingImport.activeDiagramId)
+    }
+    setPendingImport(null)
   }
 
   const handleDownloadAiSkill = async () => {
@@ -145,6 +208,31 @@ export function Toolbar() {
 
   return (
     <>
+    {isDropTargetActive && (
+      <div style={{
+        position: 'fixed', inset: 0, zIndex: 320,
+        background: 'color-mix(in srgb, var(--bg) 68%, transparent)',
+        backdropFilter: 'blur(6px)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        pointerEvents: 'none',
+      }}>
+        <div style={{
+          padding: '24px 28px',
+          borderRadius: 'var(--radius-lg)',
+          border: '2px dashed var(--accent-border)',
+          background: 'var(--surface-overlay)',
+          boxShadow: 'var(--shadow-lg)',
+          color: 'var(--text)',
+          textAlign: 'center',
+          maxWidth: 'min(420px, calc(100vw - 32px))',
+        }}>
+          <div style={{ fontSize: 15, fontWeight: 700, marginBottom: 6 }}>Drop to import</div>
+          <div style={{ fontSize: 12, color: 'var(--text-muted)', lineHeight: 1.5 }}>
+            Drop a chart or workspace JSON file to review it before loading.
+          </div>
+        </div>
+      </div>
+    )}
     <div
       style={{
         position: 'fixed',
@@ -513,9 +601,9 @@ export function Toolbar() {
       )
     })()}
 
-    {pendingWorkspace && (
+    {pendingImport && (
       <>
-        <div onClick={() => setPendingWorkspace(null)} style={{ position: 'fixed', inset: 0, zIndex: 399 }} />
+        <div onClick={() => setPendingImport(null)} style={{ position: 'fixed', inset: 0, zIndex: 399 }} />
         <div style={{
           position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%, -50%)',
           zIndex: 400, background: 'var(--surface-overlay)', border: '1px solid var(--border-muted)',
@@ -523,21 +611,27 @@ export function Toolbar() {
           backdropFilter: 'var(--backdrop-blur)', padding: '20px 24px', minWidth: 300,
         }}>
           <p style={{ fontSize: 14, color: 'var(--text)', marginBottom: 6 }}>
-            Replace entire workspace?
+            {pendingImport.kind === 'workspace' ? 'Replace entire workspace?' : 'Import chart as a new tab?'}
           </p>
           <p style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 4 }}>
-            This will replace all {diagrams.length} current tab{diagrams.length !== 1 ? 's' : ''} with {pendingWorkspace.diagrams.length} tab{pendingWorkspace.diagrams.length !== 1 ? 's' : ''} from the file.
+            {pendingImport.kind === 'workspace'
+              ? `This will replace all ${diagrams.length} current tab${diagrams.length !== 1 ? 's' : ''} with ${pendingImport.diagrams.length} tab${pendingImport.diagrams.length !== 1 ? 's' : ''} from ${pendingImport.fileName}.`
+              : `This will import \"${pendingImport.diagram.name}\" from ${pendingImport.fileName} as a new tab and switch to it.`}
           </p>
-          <p style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 20 }}>This cannot be undone.</p>
+          <p style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 20 }}>
+            {pendingImport.kind === 'workspace'
+              ? 'This cannot be undone.'
+              : `The imported chart contains ${pendingImport.diagram.elements.length} element${pendingImport.diagram.elements.length !== 1 ? 's' : ''} and ${pendingImport.diagram.connections.length} connection${pendingImport.diagram.connections.length !== 1 ? 's' : ''}.`}
+          </p>
           <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
-            <button onClick={() => setPendingWorkspace(null)} style={{
+            <button onClick={() => setPendingImport(null)} style={{
               background: 'none', border: '1px solid var(--border-muted)', borderRadius: 'var(--radius-md)',
               color: 'var(--text-secondary)', padding: '5px 14px', fontSize: 13, cursor: 'pointer', fontFamily: 'var(--font-ui)',
             }}>Cancel</button>
-            <button onClick={() => { loadWorkspace(pendingWorkspace.diagrams, pendingWorkspace.activeDiagramId); setPendingWorkspace(null) }} style={{
+            <button onClick={confirmPendingImport} style={{
               background: 'var(--accent-bg)', border: '1px solid var(--accent-border)', borderRadius: 'var(--radius-md)',
               color: 'var(--accent-light)', padding: '5px 14px', fontSize: 13, cursor: 'pointer', fontFamily: 'var(--font-ui)',
-            }}>Replace</button>
+            }}>{pendingImport.kind === 'workspace' ? 'Replace' : 'Import'}</button>
           </div>
         </div>
       </>
@@ -548,6 +642,56 @@ export function Toolbar() {
 
 function Divider() {
   return <div style={{ width: 1, height: 18, background: 'var(--border-subtle)', margin: '0 3px' }} />
+}
+
+function hasFiles(dataTransfer: DataTransfer | null) {
+  return Array.from(dataTransfer?.types ?? []).includes('Files')
+}
+
+function parseImportFile(text: string, fileName: string): PendingImport {
+  const data = JSON.parse(text) as unknown
+
+  if (looksLikeWorkspace(data)) {
+    const diagrams = data.diagrams.map((diagram) => normalizeDiagram(diagram, getBaseName(fileName)))
+    if (diagrams.length === 0) throw new Error('No diagrams found')
+    const activeDiagramId = typeof data.activeDiagramId === 'string' && diagrams.some((diagram) => diagram.id === data.activeDiagramId)
+      ? data.activeDiagramId
+      : diagrams[0].id
+    return { kind: 'workspace', fileName, diagrams, activeDiagramId }
+  }
+
+  if (looksLikeDiagram(data)) {
+    return { kind: 'diagram', fileName, diagram: normalizeDiagram(data, getBaseName(fileName)) }
+  }
+
+  throw new Error('Unsupported file')
+}
+
+function looksLikeWorkspace(data: unknown): data is { diagrams: Partial<Diagram>[]; activeDiagramId?: string } {
+  return !!data && typeof data === 'object' && Array.isArray((data as { diagrams?: unknown }).diagrams)
+}
+
+function looksLikeDiagram(data: unknown): data is Partial<Diagram> {
+  if (!data || typeof data !== 'object' || Array.isArray(data)) return false
+  return 'elements' in data || 'connections' in data || 'viewport' in data || 'name' in data
+}
+
+function normalizeDiagram(diagram: Partial<Diagram>, fallbackName: string): Diagram {
+  return {
+    id: diagram.id ?? Math.random().toString(36).slice(2, 10),
+    name: diagram.name ?? (fallbackName || 'Untitled'),
+    elements: diagram.elements ?? [],
+    connections: diagram.connections ?? [],
+    viewport: diagram.viewport ?? DEFAULT_VIEWPORT,
+  }
+}
+
+function getBaseName(fileName: string) {
+  return fileName
+    .replace(/\.holychart\.workplace\.json$/i, '')
+    .replace(/\.holychart\.workspace\.json$/i, '')
+    .replace(/\.holychart\.json$/i, '')
+    .replace(/\.json$/i, '')
 }
 
 function IconSvg({ d }: { d: string }) {
@@ -563,7 +707,7 @@ function ToolBtn({
 }: {
   children: React.ReactNode
   onClick: () => void
-  title: string
+  title: React.ReactNode
   danger?: boolean
   active?: boolean
 }) {

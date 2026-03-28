@@ -45,6 +45,11 @@ export type DiagramElement = IconElement | TextElement | BoxElement
 export type ConnectionStyle = 'solid' | 'dashed' | 'animated'
 export type ConnectionRouting = 'straight' | 'curve'
 
+export interface RenameTarget {
+  kind: 'element' | 'connection'
+  id: ElementId
+}
+
 export interface ConnectionElement {
   id: ElementId
   type: 'connection'

@@ -39,10 +39,9 @@ function buildItems(store: ReturnType<typeof useAppStore.getState>, pos: { x: nu
           action: () => { store.openColorPicker(pos.x, pos.y); close() },
         },
         {
-          keys: ['R'], description: 'Edit label',
+          keys: ['R'], description: 'Rename',
           action: () => {
-            const label = prompt('Connection label (leave blank to clear):') ?? null
-            if (label !== null) store.updateConnection(selectedConnectionId, { label: label || undefined })
+            store.openRename(selectedConnectionId, 'connection')
             close()
           },
         },
