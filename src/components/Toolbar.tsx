@@ -82,7 +82,7 @@ export function Toolbar() {
   const reloadButtonTitle = !workspaceReloadSource
     ? 'Reload workspace (import one first)'
     : workspaceHasExternalChanges
-      ? `Reload ${workspaceReloadSource.fileName} (updated on disk)`
+      ? `${workspaceReloadSource.fileName} changed on disk - reload to reimport`
       : `Reload ${workspaceReloadSource.fileName}`
   const commitFontSize = (raw: string) => {
     const val = parseInt(raw)
@@ -640,6 +640,16 @@ export function Toolbar() {
           <path d="M21 12a9 9 0 1 1-2.64-6.36" />
           <polyline points="21 3 21 9 15 9" />
         </svg>
+        {workspaceHasExternalChanges && (
+          <span style={{
+            fontSize: 9,
+            fontWeight: 700,
+            letterSpacing: 0.2,
+            textTransform: 'uppercase',
+          }}>
+            Updated
+          </span>
+        )}
       </button>
       </Tooltip>
 
